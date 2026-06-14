@@ -1,0 +1,377 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>CareFlow AI - My Status</title>
+  <style>
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+    }
+
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Arial, sans-serif;
+      background: #f1f5f9;
+      color: #1e293b;
+      min-height: 100vh;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      padding: 76px 16px 16px;
+      font-size: 16px;
+    }
+
+    .container {
+      background: #ffffff;
+      border-radius: 12px;
+      box-shadow: 0 2px 12px rgba(0, 0, 0, 0.08);
+      padding: 32px 24px;
+      max-width: 440px;
+      width: 100%;
+    }
+
+    h1 {
+      font-size: 24px;
+      margin-bottom: 4px;
+      color: #0f172a;
+    }
+
+    .subtitle {
+      color: #64748b;
+      margin-bottom: 24px;
+      font-size: 16px;
+    }
+
+    button,
+    .button {
+      width: 100%;
+      padding: 14px;
+      font-size: 16px;
+      font-weight: 600;
+      border: none;
+      border-radius: 8px;
+      background: #2563eb;
+      color: #fff;
+      cursor: pointer;
+      min-height: 44px;
+      text-align: center;
+      text-decoration: none;
+      display: inline-block;
+    }
+
+    button:hover,
+    .button:hover {
+      background: #1d4ed8;
+    }
+
+    button:disabled {
+      background: #93c5fd;
+      cursor: not-allowed;
+    }
+
+    .hidden {
+      display: none;
+    }
+
+    #loading-screen {
+      text-align: center;
+      padding: 24px 0;
+    }
+
+    .spinner {
+      width: 40px;
+      height: 40px;
+      border: 4px solid #e2e8f0;
+      border-top-color: #2563eb;
+      border-radius: 50%;
+      margin: 0 auto 16px;
+      animation: spin 0.8s linear infinite;
+    }
+
+    @keyframes spin {
+      to {
+        transform: rotate(360deg);
+      }
+    }
+
+    #error-screen,
+    #invalid-screen {
+      text-align: center;
+    }
+
+    .icon {
+      width: 56px;
+      height: 56px;
+      border-radius: 50%;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 28px;
+      font-weight: 700;
+      margin: 0 auto 16px;
+      color: #fff;
+    }
+
+    .success-icon {
+      background: #10b981;
+    }
+
+    .error-icon {
+      background: #ef4444;
+    }
+
+    .status-badge {
+      display: inline-block;
+      padding: 6px 14px;
+      border-radius: 999px;
+      font-size: 14px;
+      font-weight: 700;
+      margin-bottom: 20px;
+    }
+
+    .status-checked_in {
+      background: #dbeafe;
+      color: #1d4ed8;
+    }
+
+    .status-called {
+      background: #fef9c3;
+      color: #92400e;
+    }
+
+    .status-in_progress {
+      background: #ede9fe;
+      color: #6d28d9;
+    }
+
+    .status-completed {
+      background: #d1fae5;
+      color: #047857;
+    }
+
+    .status-no_show {
+      background: #fee2e2;
+      color: #b91c1c;
+    }
+
+    .result-card {
+      background: #f8fafc;
+      border-radius: 8px;
+      padding: 16px;
+      margin: 20px 0;
+      text-align: left;
+    }
+
+    .result-row {
+      display: flex;
+      justify-content: space-between;
+      padding: 8px 0;
+      font-size: 16px;
+    }
+
+    .result-row + .result-row {
+      border-top: 1px solid #e2e8f0;
+    }
+
+    .result-label {
+      color: #64748b;
+    }
+
+    .result-value {
+      font-weight: 700;
+    }
+
+    .notice {
+      color: #64748b;
+      font-size: 16px;
+      margin-bottom: 4px;
+    }
+
+    .refresh-note {
+      color: #94a3b8;
+      font-size: 13px;
+      text-align: center;
+      margin-top: 16px;
+    }
+
+    #error-message,
+    #invalid-message {
+      color: #64748b;
+      margin-bottom: 20px;
+      font-size: 16px;
+    }
+  </style>
+</head>
+<body>
+  <nav style="background:#1B3A6B; padding:14px 32px; display:flex; align-items:center; justify-content:space-between; position:fixed; top:0; left:0; right:0; z-index:100; box-sizing:border-box;">
+    <span style="color:white; font-weight:700; font-size:18px; font-family:Inter,sans-serif;">CareFlow AI</span>
+    <a href="/" style="color:white; font-size:14px; font-family:Inter,sans-serif; text-decoration:none; border:1px solid rgba(255,255,255,0.4); padding:8px 16px; border-radius:6px;">← Back to Home</a>
+  </nav>
+  <div class="container">
+
+    <div id="loading-screen">
+      <div class="spinner"></div>
+      <p>Loading your status...</p>
+    </div>
+
+    <div id="status-screen" class="hidden">
+      <h1>My Status</h1>
+      <p class="subtitle" id="status-greeting"></p>
+
+      <div id="status-badge" class="status-badge"></div>
+
+      <div class="result-card">
+        <div class="result-row">
+          <span class="result-label">Queue Position</span>
+          <span class="result-value" id="result-queue-position"></span>
+        </div>
+        <div class="result-row">
+          <span class="result-label">People Ahead of You</span>
+          <span class="result-value" id="result-people-ahead"></span>
+        </div>
+        <div class="result-row">
+          <span class="result-label">Estimated Wait</span>
+          <span class="result-value" id="result-wait"></span>
+        </div>
+      </div>
+
+      <p class="notice" id="status-message"></p>
+      <p class="refresh-note" id="refresh-note">This page updates automatically.</p>
+    </div>
+
+    <div id="error-screen" class="hidden">
+      <div class="icon error-icon">!</div>
+      <h1>Something Went Wrong</h1>
+      <p id="error-message">We couldn't load your status. Please try again.</p>
+      <button type="button" id="retry-btn" class="button">Try Again</button>
+    </div>
+
+    <div id="invalid-screen" class="hidden">
+      <div class="icon error-icon">!</div>
+      <h1>Invalid Link</h1>
+      <p id="invalid-message">This link is missing or invalid. Please use the link provided after check-in.</p>
+    </div>
+
+  </div>
+
+  <script>
+    const API_URL = "";
+    const REFRESH_INTERVAL_MS = 15000;
+
+    const STATUS_LABELS = {
+      checked_in: "Waiting in Queue",
+      called: "You've Been Called",
+      in_progress: "With the Doctor",
+      completed: "Visit Completed",
+      no_show: "Marked as No-Show",
+    };
+
+    const STATUS_MESSAGES = {
+      checked_in: "Please continue to wait for your name to be called.",
+      called: "Please make your way to the front desk now.",
+      in_progress: "You are currently being seen by a member of our care team.",
+      completed: "Thank you for visiting us today.",
+      no_show: "We marked you as a no-show. Please speak to the front desk if this is a mistake.",
+    };
+
+    const ACTIVE_STATUSES = ["checked_in", "called", "in_progress"];
+
+    const loadingScreen = document.getElementById("loading-screen");
+    const statusScreen = document.getElementById("status-screen");
+    const errorScreen = document.getElementById("error-screen");
+    const invalidScreen = document.getElementById("invalid-screen");
+    const retryBtn = document.getElementById("retry-btn");
+
+    let pollTimer = null;
+
+    function showScreen(screen) {
+      [loadingScreen, statusScreen, errorScreen, invalidScreen].forEach((el) =>
+        el.classList.add("hidden")
+      );
+      screen.classList.remove("hidden");
+    }
+
+    const params = new URLSearchParams(window.location.search);
+    const visitId = params.get("visit_id");
+
+    function renderStatus(data) {
+      const statusKey = data.status || "checked_in";
+      const label = STATUS_LABELS[statusKey] || statusKey;
+      const message = STATUS_MESSAGES[statusKey] || "";
+
+      document.getElementById("status-greeting").textContent = data.name
+        ? `Hi ${data.name}, here's where things stand.`
+        : "Here's where things stand.";
+
+      const badge = document.getElementById("status-badge");
+      badge.textContent = label;
+      badge.className = `status-badge status-${statusKey}`;
+
+      document.getElementById("result-queue-position").textContent = data.queue_position;
+      document.getElementById("result-people-ahead").textContent =
+        ACTIVE_STATUSES.includes(statusKey) ? data.people_ahead : "—";
+      document.getElementById("result-wait").textContent = `${data.estimated_wait} min`;
+
+      document.getElementById("status-message").textContent = message;
+
+      const refreshNote = document.getElementById("refresh-note");
+      if (ACTIVE_STATUSES.includes(statusKey)) {
+        refreshNote.textContent = "This page updates automatically.";
+        refreshNote.classList.remove("hidden");
+      } else {
+        refreshNote.classList.add("hidden");
+        if (pollTimer) {
+          clearInterval(pollTimer);
+          pollTimer = null;
+        }
+      }
+
+      showScreen(statusScreen);
+    }
+
+    async function fetchStatus() {
+      try {
+        const response = await fetch(`${API_URL}/api/visit/${encodeURIComponent(visitId)}`);
+
+        if (!response.ok) {
+          const errorData = await response.json().catch(() => ({}));
+          throw new Error(errorData.error || "Could not load status");
+        }
+
+        const data = await response.json();
+        renderStatus(data);
+      } catch (err) {
+        if (pollTimer) {
+          clearInterval(pollTimer);
+          pollTimer = null;
+        }
+        document.getElementById("error-message").textContent =
+          "We couldn't load your status. Please check your connection and try again.";
+        showScreen(errorScreen);
+      }
+    }
+
+    function startPolling() {
+      if (pollTimer) {
+        clearInterval(pollTimer);
+      }
+      pollTimer = setInterval(fetchStatus, REFRESH_INTERVAL_MS);
+    }
+
+    if (!visitId) {
+      showScreen(invalidScreen);
+    } else {
+      fetchStatus();
+      startPolling();
+    }
+
+    retryBtn.addEventListener("click", () => {
+      showScreen(loadingScreen);
+      fetchStatus();
+      startPolling();
+    });
+  </script>
+</body>
+</html>
