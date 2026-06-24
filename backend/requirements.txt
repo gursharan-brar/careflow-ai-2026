@@ -1,0 +1,9 @@
+flask==3.1.3
+anthropic==0.104.0
+flask-mail
+flask-cors
+flask-limiter==4.1.1
+apscheduler
+python-dotenv
+gunicorn==26.0.0
+requests

@@ -1,0 +1,465 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>CareFlow AI - Health Questions</title>
+  <link rel="stylesheet" href="/frontend/chat-widget.css">
+  <style>
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+    }
+
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Arial, sans-serif;
+      background: #f1f5f9;
+      color: #1e293b;
+      min-height: 100vh;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      padding: 76px 16px 16px;
+      font-size: 16px;
+    }
+
+    .container {
+      background: #ffffff;
+      border-radius: 12px;
+      box-shadow: 0 2px 12px rgba(0, 0, 0, 0.08);
+      padding: 32px 24px;
+      max-width: 480px;
+      width: 100%;
+    }
+
+    h1 {
+      font-size: 24px;
+      margin-bottom: 4px;
+      color: #0f172a;
+    }
+
+    .subtitle {
+      color: #64748b;
+      margin-bottom: 24px;
+      font-size: 16px;
+    }
+
+    .field {
+      margin-bottom: 18px;
+    }
+
+    label {
+      display: block;
+      font-weight: 600;
+      margin-bottom: 6px;
+      font-size: 16px;
+    }
+
+    fieldset {
+      border: none;
+      padding: 0;
+      margin: 0 0 18px 0;
+    }
+
+    legend {
+      font-weight: 600;
+      margin-bottom: 8px;
+      font-size: 16px;
+      padding: 0;
+    }
+
+    .radio-option {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      padding: 10px 12px;
+      border: 1px solid #cbd5e1;
+      border-radius: 8px;
+      margin-bottom: 8px;
+      font-size: 15px;
+      cursor: pointer;
+    }
+
+    .radio-option:hover {
+      border-color: #2563eb;
+    }
+
+    .radio-option input[type="radio"] {
+      width: 18px;
+      height: 18px;
+      flex-shrink: 0;
+      accent-color: #2563eb;
+    }
+
+    .radio-option.invalid {
+      border-color: #ef4444;
+    }
+
+    .error {
+      display: block;
+      color: #ef4444;
+      font-size: 14px;
+      margin-top: 4px;
+      min-height: 18px;
+    }
+
+    button,
+    .button {
+      width: 100%;
+      padding: 14px;
+      font-size: 16px;
+      font-weight: 600;
+      border: none;
+      border-radius: 8px;
+      background: #2563eb;
+      color: #fff;
+      cursor: pointer;
+      min-height: 44px;
+      text-align: center;
+      text-decoration: none;
+      display: inline-block;
+    }
+
+    button:hover,
+    .button:hover {
+      background: #1d4ed8;
+    }
+
+    button:disabled {
+      background: #93c5fd;
+      cursor: not-allowed;
+    }
+
+    .hidden {
+      display: none;
+    }
+
+    #loading-screen {
+      text-align: center;
+      padding: 24px 0;
+    }
+
+    .spinner {
+      width: 40px;
+      height: 40px;
+      border: 4px solid #e2e8f0;
+      border-top-color: #2563eb;
+      border-radius: 50%;
+      margin: 0 auto 16px;
+      animation: spin 0.8s linear infinite;
+    }
+
+    @keyframes spin {
+      to {
+        transform: rotate(360deg);
+      }
+    }
+
+    #confirmation-screen,
+    #error-screen,
+    #invalid-screen {
+      text-align: center;
+    }
+
+    .icon {
+      width: 56px;
+      height: 56px;
+      border-radius: 50%;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 28px;
+      font-weight: 700;
+      margin: 0 auto 16px;
+      color: #fff;
+    }
+
+    .success-icon {
+      background: #10b981;
+    }
+
+    .error-icon {
+      background: #ef4444;
+    }
+
+    .notice {
+      color: #64748b;
+      font-size: 16px;
+      margin-bottom: 4px;
+    }
+
+    #error-message,
+    #invalid-message {
+      color: #64748b;
+      margin-bottom: 20px;
+      font-size: 16px;
+    }
+  </style>
+</head>
+<body>
+  <nav style="background:#1B3A6B; padding:14px 32px; display:flex; align-items:center; justify-content:space-between; position:fixed; top:0; left:0; right:0; z-index:100; box-sizing:border-box;">
+    <span style="color:white; font-weight:700; font-size:18px; font-family:Inter,sans-serif;">CareFlow AI</span>
+    <a href="/" style="color:white; font-size:14px; font-family:Inter,sans-serif; text-decoration:none; border:1px solid rgba(255,255,255,0.4); padding:8px 16px; border-radius:6px;">← Back to Home</a>
+  </nav>
+  <div class="container">
+
+    <div id="form-screen" class="hidden">
+      <h1>A Few Health Questions</h1>
+      <p class="subtitle">This helps our staff prepare for your visit. It does not affect your place in line.</p>
+
+      <form id="triage-form" novalidate>
+        <div id="questions-container"></div>
+        <button type="submit" id="submit-btn">Submit</button>
+      </form>
+    </div>
+
+    <div id="loading-screen" class="hidden">
+      <div class="spinner"></div>
+      <p>Submitting your answers...</p>
+    </div>
+
+    <div id="confirmation-screen" class="hidden">
+      <div class="icon success-icon">&#10003;</div>
+      <h1>Thank You</h1>
+      <p class="notice">Your answers have been sent to our care team.</p>
+      <p class="notice" style="margin-bottom: 20px;">Please continue to wait for your name to be called.</p>
+      <a href="#" id="status-link" class="button">Check My Status</a>
+    </div>
+
+    <div id="error-screen" class="hidden">
+      <div class="icon error-icon">!</div>
+      <h1>Something Went Wrong</h1>
+      <p id="error-message">We couldn't submit your answers. Please try again.</p>
+      <button type="button" id="retry-btn" class="button">Try Again</button>
+    </div>
+
+    <div id="invalid-screen" class="hidden">
+      <div class="icon error-icon">!</div>
+      <h1>Invalid Link</h1>
+      <p id="invalid-message">This link is missing or invalid. Please use the link provided after check-in.</p>
+    </div>
+
+  </div>
+
+  <script>
+    const API_URL = "";
+
+    const TRIAGE_QUESTIONS = {
+      gp_consult: [
+        {
+          text: "How long have you had these symptoms?",
+          options: ["Less than 24 hours", "1 to 3 days", "More than 3 days", "Ongoing for weeks or months"],
+        },
+        {
+          text: "How severe are your symptoms?",
+          options: ["Mild — barely noticeable", "Moderate — affecting daily activities", "Severe — very uncomfortable", "Extreme — worst I have felt"],
+        },
+        {
+          text: "Do you have a fever?",
+          options: ["No fever", "Low grade under 38 degrees", "High fever 38 to 39 degrees", "Very high fever over 39 degrees"],
+        },
+        {
+          text: "Are you experiencing chest pain or difficulty breathing?",
+          options: ["No", "Mild chest discomfort", "Chest pain or pressure", "Difficulty breathing or shortness of breath"],
+        },
+        {
+          text: "Have you had these symptoms before?",
+          options: ["No this is new", "Yes similar before but milder", "Yes same as before", "Yes recurring condition"],
+        },
+      ],
+      prescription_renewal: [
+        {
+          text: "Is this a regular ongoing prescription?",
+          options: ["Yes ongoing for over a year", "Yes but recently started", "No this is a new prescription", "Not sure"],
+        },
+        {
+          text: "Have you experienced any side effects recently?",
+          options: ["No side effects", "Mild side effects manageable", "Moderate side effects", "Severe side effects need attention"],
+        },
+        {
+          text: "Do you have your previous prescription information?",
+          options: ["Yes I have it with me", "Yes I know the medication name", "Partially", "No I do not have it"],
+        },
+        {
+          text: "Is this renewal urgent or routine?",
+          options: ["Routine I have some medication left", "Slightly urgent running low", "Urgent I run out today", "Emergency I have none left"],
+        },
+        {
+          text: "Do you have any new allergies since your last visit?",
+          options: ["No new allergies", "Possibly unsure", "Yes new allergy to medication", "Yes new allergy to other substance"],
+        },
+      ],
+      injury: [
+        {
+          text: "When did the injury occur?",
+          options: ["Within the last hour", "Today", "Yesterday", "2 to 3 days ago", "More than 3 days ago"],
+        },
+        {
+          text: "How would you describe the pain?",
+          options: ["Dull and mild", "Dull and persistent", "Sharp and manageable", "Sharp and severe"],
+        },
+        {
+          text: "Can you put weight on the affected area?",
+          options: ["Yes fully", "Yes with some pain", "With difficulty and pain", "No I cannot"],
+        },
+        {
+          text: "Is there visible swelling or bruising?",
+          options: ["No swelling or bruising", "Mild swelling", "Significant swelling", "Severe swelling and bruising"],
+        },
+        {
+          text: "Did you hear a pop or crack at the time?",
+          options: ["No", "I am not sure", "Yes I heard something", "Yes and it was painful"],
+        },
+      ],
+      general: [
+        {
+          text: "How long have you had this concern?",
+          options: ["Just started today", "A few days", "About a week", "Several weeks", "Months or longer"],
+        },
+        {
+          text: "How much is this affecting your daily activities?",
+          options: ["Not at all", "Slightly", "Moderately", "Significantly", "Cannot function normally"],
+        },
+        {
+          text: "Have you seen a doctor for this before?",
+          options: ["No first time", "Yes but a long time ago", "Yes recently", "Yes and I am following up"],
+        },
+        {
+          text: "Is your concern getting better, worse, or staying the same?",
+          options: ["Getting better", "Staying the same", "Getting worse", "Getting much worse quickly"],
+        },
+        {
+          text: "On a scale of concern how worried are you?",
+          options: ["Not very worried just checking", "Somewhat concerned", "Quite concerned", "Very worried"],
+        },
+      ],
+    };
+
+    const formScreen = document.getElementById("form-screen");
+    const loadingScreen = document.getElementById("loading-screen");
+    const confirmationScreen = document.getElementById("confirmation-screen");
+    const errorScreen = document.getElementById("error-screen");
+    const invalidScreen = document.getElementById("invalid-screen");
+    const form = document.getElementById("triage-form");
+    const questionsContainer = document.getElementById("questions-container");
+    const submitBtn = document.getElementById("submit-btn");
+    const retryBtn = document.getElementById("retry-btn");
+
+    function showScreen(screen) {
+      [formScreen, loadingScreen, confirmationScreen, errorScreen, invalidScreen].forEach((el) =>
+        el.classList.add("hidden")
+      );
+      screen.classList.remove("hidden");
+    }
+
+    const params = new URLSearchParams(window.location.search);
+    const visitId = params.get("visit_id");
+    const visitType = params.get("visit_type");
+    const questions = visitType ? TRIAGE_QUESTIONS[visitType] : null;
+
+    if (!visitId || !questions) {
+      showScreen(invalidScreen);
+    } else {
+      questions.forEach((question, index) => {
+        const fieldset = document.createElement("fieldset");
+
+        const legend = document.createElement("legend");
+        legend.textContent = question.text;
+        fieldset.appendChild(legend);
+
+        question.options.forEach((option, optionIndex) => {
+          const optionLabel = document.createElement("label");
+          optionLabel.className = "radio-option";
+          optionLabel.setAttribute("for", `q${index}-${optionIndex}`);
+
+          const radio = document.createElement("input");
+          radio.type = "radio";
+          radio.id = `q${index}-${optionIndex}`;
+          radio.name = `q${index}`;
+          radio.value = option;
+
+          const optionText = document.createElement("span");
+          optionText.textContent = option;
+
+          optionLabel.appendChild(radio);
+          optionLabel.appendChild(optionText);
+          fieldset.appendChild(optionLabel);
+        });
+
+        const error = document.createElement("span");
+        error.className = "error";
+        error.id = `q${index}-error`;
+        fieldset.appendChild(error);
+
+        questionsContainer.appendChild(fieldset);
+      });
+
+      showScreen(formScreen);
+    }
+
+    function validateForm() {
+      let valid = true;
+
+      questions.forEach((question, index) => {
+        const options = document.querySelectorAll(`input[name="q${index}"]`);
+        const selected = document.querySelector(`input[name="q${index}"]:checked`);
+        const errorEl = document.getElementById(`q${index}-error`);
+
+        if (!selected) {
+          errorEl.textContent = "Please select an option";
+          options.forEach((opt) => opt.closest(".radio-option").classList.add("invalid"));
+          valid = false;
+        } else {
+          errorEl.textContent = "";
+          options.forEach((opt) => opt.closest(".radio-option").classList.remove("invalid"));
+        }
+      });
+
+      return valid;
+    }
+
+    if (form) {
+      form.addEventListener("submit", async (e) => {
+        e.preventDefault();
+
+        if (!validateForm()) {
+          return;
+        }
+
+        submitBtn.disabled = true;
+        showScreen(loadingScreen);
+
+        const symptomAnswers = questions.map((_, index) => document.querySelector(`input[name="q${index}"]:checked`).value);
+
+        try {
+          const response = await fetch(`${API_URL}/api/triage`, {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ visit_id: visitId, symptom_answers: symptomAnswers }),
+          });
+
+          if (!response.ok) {
+            const errorData = await response.json().catch(() => ({}));
+            throw new Error(errorData.error || "Submission failed");
+          }
+
+          document.getElementById("status-link").href = `/status?visit_id=${encodeURIComponent(visitId)}`;
+          showScreen(confirmationScreen);
+        } catch (err) {
+          document.getElementById("error-message").textContent =
+            "We couldn't submit your answers. Please check your connection and try again.";
+          showScreen(errorScreen);
+        } finally {
+          submitBtn.disabled = false;
+        }
+      });
+    }
+
+    retryBtn.addEventListener("click", () => {
+      showScreen(formScreen);
+    });
+  </script>
+  <script src="/frontend/chat-widget.js"></script>
+</body>
+</html>

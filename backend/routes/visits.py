@@ -1,7 +1,8 @@
 from datetime import datetime
-from flask import Blueprint, request, jsonify
+from flask import Blueprint, request, jsonify, session
 
-from db import get_db, now_iso, ACTIVE_STATUSES_EXCLUDE
+from db import get_db, now_iso, ACTIVE_STATUSES_EXCLUDE, calculate_doctor_wait, get_doctor_position
+from auth import require_staff_login
 
 visits_bp = Blueprint("visits", __name__)
 
@@ -58,13 +59,14 @@ def get_visit(visit_id):
 
 
 @visits_bp.route("/api/visit/<visit_id>/status", methods=["PATCH"])
+@require_staff_login
 def update_status(visit_id):
     data = request.get_json(silent=True) or {}
     new_status = (data.get("status") or "").strip()
-    actor = (data.get("actor") or "").strip()
+    actor = session.get("staff_name") or "unknown staff"
 
-    if not new_status or not actor:
-        return jsonify({"error": "status and actor are required"}), 400
+    if not new_status:
+        return jsonify({"error": "status is required"}), 400
 
     conn = get_db()
     cur = conn.cursor()
@@ -112,5 +114,67 @@ def update_status(visit_id):
     return jsonify({
         "visit_id": visit_id,
         "status": new_status,
+        "updated_at": updated_at,
+    })
+
+
+@visits_bp.route("/api/visits/<visit_id>/assign", methods=["PATCH"])
+@require_staff_login
+def assign_visit(visit_id):
+    data = request.get_json(silent=True) or {}
+
+    if "doctor_id" not in data:
+        return jsonify({"error": "doctor_id is required (use null to unassign)"}), 400
+
+    doctor_id = data.get("doctor_id")
+
+    if doctor_id is not None and not isinstance(doctor_id, int):
+        return jsonify({"error": "doctor_id must be an integer or null"}), 400
+
+    conn = get_db()
+    cur = conn.cursor()
+    cur.execute(
+        "SELECT id, visit_type, status, queue_position FROM visits WHERE id = ?",
+        (visit_id,),
+    )
+    visit = cur.fetchone()
+
+    if not visit:
+        conn.close()
+        return jsonify({"error": "visit not found"}), 404
+
+    if doctor_id is not None:
+        cur.execute("SELECT id, name, status FROM doctors WHERE id = ?", (doctor_id,))
+        doctor = cur.fetchone()
+
+        if not doctor:
+            conn.close()
+            return jsonify({"error": "doctor not found"}), 404
+
+        if doctor["status"] != "on_shift":
+            conn.close()
+            return jsonify({"error": f"{doctor['name']} is not currently on shift"}), 400
+
+    updated_at = now_iso()
+    cur.execute(
+        "UPDATE visits SET doctor_id = ?, updated_at = ? WHERE id = ?",
+        (doctor_id, updated_at, visit_id),
+    )
+
+    if doctor_id is None:
+        estimated_wait = None
+        doctor_position = None
+    else:
+        doctor_position = get_doctor_position(cur, doctor_id, visit["queue_position"])
+        estimated_wait = calculate_doctor_wait(visit["visit_type"], doctor_position)
+
+    conn.commit()
+    conn.close()
+
+    return jsonify({
+        "visit_id": visit_id,
+        "doctor_id": doctor_id,
+        "doctor_position": doctor_position,
+        "estimated_wait": estimated_wait,
         "updated_at": updated_at,
     })
