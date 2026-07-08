@@ -1,34 +1,10 @@
-import { Link, useLocation } from 'react-router-dom';
-
-const NAV_LINKS = [
-  { to: '/', label: 'Dashboard' },
-  { to: '/doctors', label: 'Doctors' },
-];
-
-export default function Header({ rightSlot }) {
-  const location = useLocation();
-
+export default function Header({ title, subtitle, rightSlot }) {
   return (
-    <header className="bg-c-navy text-white shadow-md px-6 py-4">
-      <div className="max-w-7xl mx-auto flex items-center justify-between">
-        <div className="flex items-center gap-8">
-          <div>
-            <h1 className="text-xl font-bold text-white">CareFlow AI</h1>
-            <p className="text-sm text-white/80">Calgary Walk-In Clinic Platform</p>
-          </div>
-          <nav className="flex items-center gap-4">
-            {NAV_LINKS.map((link) => (
-              <Link
-                key={link.to}
-                to={link.to}
-                className={`text-sm font-medium transition-colors ${
-                  location.pathname === link.to ? 'text-white' : 'text-white/70 hover:text-white'
-                }`}
-              >
-                {link.label}
-              </Link>
-            ))}
-          </nav>
+    <header className="bg-white border-b border-gray-100 px-10 py-7">
+      <div className="flex items-center justify-between flex-wrap gap-3">
+        <div>
+          <h1 className="text-3xl font-extrabold text-c-navy tracking-tight">{title}</h1>
+          {subtitle && <p className="text-base text-gray-500 mt-1">{subtitle}</p>}
         </div>
         {rightSlot}
       </div>

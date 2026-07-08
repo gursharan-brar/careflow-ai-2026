@@ -6,8 +6,10 @@
 
 :root {
   --c-navy: #1B3A6B;
+  --c-navy-deep: #122849;
   --c-teal: #0D7377;
   --c-teal-hover: #0a5f62;
+  --c-teal-soft: #E6F5F5;
   --c-bg: #F9FAFB;
   --c-white: #FFFFFF;
   --c-text: #1A1A1A;

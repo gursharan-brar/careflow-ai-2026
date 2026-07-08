@@ -27,11 +27,11 @@ def get_queue():
         f"""
         SELECT v.id, v.name, v.visit_type, v.queue_position, v.priority_level, v.status,
                v.health_alert_match, v.created_at, v.email, v.position3_notified, v.doctor_id,
-               d.name AS doctor_name
+               v.booked_slot_time, d.name AS doctor_name
         FROM visits v
         LEFT JOIN doctors d ON v.doctor_id = d.id
         WHERE v.status NOT IN ({placeholders})
-        ORDER BY v.queue_position ASC
+        ORDER BY (v.booked_slot_time IS NULL) ASC, v.booked_slot_time ASC, v.queue_position ASC
         """,
         ACTIVE_EXCLUDE,
     )
@@ -66,6 +66,7 @@ def get_queue():
             "doctor_id": doctor_id,
             "doctor_name": row["doctor_name"],
             "doctor_position": doctor_position,
+            "booked_slot_time": row["booked_slot_time"],
         })
         if row["queue_position"] == 3 and row["position3_notified"] == 0:
             position3_candidates.append((row["id"], row["name"], row["email"]))

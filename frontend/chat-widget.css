@@ -9,13 +9,13 @@
   color: #fff;
   border: none;
   cursor: pointer;
-  box-shadow: 0 6px 20px rgba(13, 115, 119, 0.35), 0 2px 6px rgba(0, 0, 0, 0.15), 0 0 0 0 rgba(13, 115, 119, 0.45);
+  box-shadow: 0 6px 20px rgba(13, 115, 119, 0.35), 0 2px 6px rgba(0, 0, 0, 0.15), 0 0 0 0 rgba(13, 115, 119, 0.55);
   display: flex;
   align-items: center;
   justify-content: center;
   z-index: 1000;
   font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Arial, sans-serif;
-  animation: careflow-launcher-pulse 2.8s ease-in-out infinite;
+  animation: careflow-launcher-pulse 2.2s ease-in-out infinite;
   transition: background 0.2s ease;
 }
 
@@ -30,10 +30,12 @@
 
 @keyframes careflow-launcher-pulse {
   0%, 100% {
-    box-shadow: 0 6px 20px rgba(13, 115, 119, 0.35), 0 2px 6px rgba(0, 0, 0, 0.15), 0 0 0 0 rgba(13, 115, 119, 0.45);
+    transform: scale(1);
+    box-shadow: 0 6px 20px rgba(13, 115, 119, 0.35), 0 2px 6px rgba(0, 0, 0, 0.15), 0 0 0 0 rgba(13, 115, 119, 0.55);
   }
   50% {
-    box-shadow: 0 6px 20px rgba(13, 115, 119, 0.35), 0 2px 6px rgba(0, 0, 0, 0.15), 0 0 0 10px rgba(13, 115, 119, 0);
+    transform: scale(1.05);
+    box-shadow: 0 6px 20px rgba(13, 115, 119, 0.35), 0 2px 6px rgba(0, 0, 0, 0.15), 0 0 0 18px rgba(13, 115, 119, 0);
   }
 }
 

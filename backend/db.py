@@ -1,8 +1,11 @@
 import os
 import math
+import logging
 import sqlite3
 import uuid
 from datetime import datetime, timezone
+
+logger = logging.getLogger(__name__)
 
 DATABASE_PATH = os.environ.get("DATABASE_PATH", "careflow.db")
 
@@ -255,6 +258,18 @@ def init_db():
     visit_columns = {row["name"] for row in cur.fetchall()}
     if "doctor_id" not in visit_columns:
         cur.execute("ALTER TABLE visits ADD COLUMN doctor_id INTEGER REFERENCES doctors(id) DEFAULT NULL")
+    if "booked_slot_time" not in visit_columns:
+        # Set when a visit was created from a same-day booking's "Arrived" action
+        # (see routes/appointments.py) rather than a walk-in check-in. Lets the
+        # queue sort booked arrivals to the front of their doctor's lane by their
+        # original slot time, with walk-ins following by check-in order.
+        cur.execute("ALTER TABLE visits ADD COLUMN booked_slot_time TEXT DEFAULT NULL")
+    if "triage_answers" not in visit_columns:
+        # JSON-encoded array of {"question": ..., "answer": ...} pairs, written by
+        # POST /api/triage before the Claude call so the patient's raw answers are
+        # never lost even if classify_triage() fails (see routes/checkin.py).
+        cur.execute("ALTER TABLE visits ADD COLUMN triage_answers TEXT DEFAULT NULL")
+        logger.info("Migrated visits table: added triage_answers column")
 
     conn.commit()
     conn.close()

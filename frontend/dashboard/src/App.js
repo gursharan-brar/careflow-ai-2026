@@ -2,12 +2,15 @@ import { useEffect, useState } from 'react';
 import { Routes, Route } from 'react-router-dom';
 import Dashboard from './components/Dashboard';
 import DoctorsPage from './components/DoctorsPage';
+import PatientsPage from './components/PatientsPage';
 import StaffChatWidget from './components/StaffChatWidget';
+import Sidebar from './components/Sidebar';
 
 const API_URL = process.env.REACT_APP_API_URL;
 
 function App() {
   const [authChecked, setAuthChecked] = useState(false);
+  const [staffName, setStaffName] = useState(null);
 
   useEffect(() => {
     let isMounted = true;
@@ -23,6 +26,7 @@ function App() {
           window.location.href = `${API_URL}/login`;
           return;
         }
+        setStaffName(data.display_name || null);
         setAuthChecked(true);
       } catch {
         window.location.href = `${API_URL}/login`;
@@ -36,19 +40,33 @@ function App() {
     };
   }, []);
 
+  async function handleLogout() {
+    try {
+      await fetch(`${API_URL}/api/logout`, { method: "POST", credentials: "include" });
+    } catch {
+      // proceed to login regardless
+    }
+    window.location.href = `${API_URL}/login`;
+  }
+
   if (!authChecked) {
     return null;
   }
 
   return (
-    <>
-      <Routes>
-        <Route path="/" element={<Dashboard />} />
-        <Route path="/doctors" element={<DoctorsPage />} />
-      </Routes>
+    <div className="flex min-h-screen bg-c-bg">
+      <Sidebar staffName={staffName} onLogout={handleLogout} />
+
+      <div className="flex-1 min-w-0">
+        <Routes>
+          <Route path="/" element={<Dashboard />} />
+          <Route path="/doctors" element={<DoctorsPage />} />
+          <Route path="/patients" element={<PatientsPage />} />
+        </Routes>
+      </div>
 
       <StaffChatWidget />
-    </>
+    </div>
   );
 }
 

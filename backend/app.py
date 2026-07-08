@@ -23,6 +23,7 @@ from routes.staff_chat import staff_chat_bp
 from routes.config import config_bp
 from routes.doctors import doctors_bp
 from routes.appointments import appointments_bp
+from routes.patients import patients_bp
 
 load_dotenv()
 
@@ -73,6 +74,7 @@ def create_app():
     app.register_blueprint(config_bp)
     app.register_blueprint(doctors_bp)
     app.register_blueprint(appointments_bp)
+    app.register_blueprint(patients_bp)
 
     @app.route("/api/ping")
     def ping():

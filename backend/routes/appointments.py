@@ -1,12 +1,23 @@
 import re
 from datetime import datetime, date
 
-from flask import Blueprint, request, jsonify
+from flask import Blueprint, request, jsonify, session
 
-from db import get_db, get_db_for_transaction, now_iso, BOOKING_SLOTS, APPOINTMENT_ACTIVE_STATUSES_EXCLUDE
+from db import (
+    get_db,
+    get_db_for_transaction,
+    now_iso,
+    generate_id,
+    get_next_queue_position,
+    calculate_wait,
+    BOOKING_SLOTS,
+    APPOINTMENT_ACTIVE_STATUSES_EXCLUDE,
+)
 from auth import require_staff_login
 from mail import send_booking_confirmation
 from rate_limit import limiter
+
+ARRIVAL_VISIT_TYPE = "general"
 
 appointments_bp = Blueprint("appointments", __name__)
 
@@ -246,3 +257,88 @@ def update_appointment_status(appointment_id):
     conn.close()
 
     return jsonify({"id": appointment_id, "status": new_status})
+
+
+@appointments_bp.route("/api/appointments/<int:appointment_id>/arrive", methods=["POST"])
+@require_staff_login
+def arrive_appointment(appointment_id):
+    """Patient has physically arrived for a same-day booking. Creates a real
+    queue visit pre-assigned to the booked doctor (skipping the unassigned
+    queue entirely) and tags it with the original slot time so the queue can
+    sort booked arrivals ahead of walk-ins in that doctor's lane."""
+    actor = session.get("staff_name") or "unknown staff"
+
+    conn = get_db_for_transaction()
+    cur = conn.cursor()
+    try:
+        cur.execute("BEGIN IMMEDIATE")
+
+        cur.execute(
+            "SELECT id, doctor_id, patient_name, patient_email, patient_phone, slot_time, status, visit_id "
+            "FROM appointments WHERE id = ?",
+            (appointment_id,),
+        )
+        appointment = cur.fetchone()
+
+        if not appointment:
+            cur.execute("ROLLBACK")
+            conn.close()
+            return jsonify({"error": "appointment not found"}), 404
+
+        if appointment["status"] != "confirmed" or appointment["visit_id"] is not None:
+            cur.execute("ROLLBACK")
+            conn.close()
+            return jsonify({"error": "this booking has already been checked in or is no longer active"}), 409
+
+        visit_id = generate_id()
+        created_at = now_iso()
+        queue_position = get_next_queue_position(cur)
+        estimated_wait = calculate_wait(ARRIVAL_VISIT_TYPE, queue_position)
+
+        cur.execute(
+            """
+            INSERT INTO visits (id, name, visit_type, email, phone, queue_position, doctor_id,
+                                 status, estimated_wait, booked_slot_time, created_at, updated_at)
+            VALUES (?, ?, ?, ?, ?, ?, ?, 'checked_in', ?, ?, ?, ?)
+            """,
+            (
+                visit_id,
+                appointment["patient_name"],
+                ARRIVAL_VISIT_TYPE,
+                appointment["patient_email"],
+                appointment["patient_phone"],
+                queue_position,
+                appointment["doctor_id"],
+                estimated_wait,
+                appointment["slot_time"],
+                created_at,
+                created_at,
+            ),
+        )
+
+        cur.execute(
+            "UPDATE appointments SET visit_id = ?, status = 'completed' WHERE id = ?",
+            (visit_id, appointment_id),
+        )
+
+        cur.execute(
+            """
+            INSERT INTO audit_log (visit_id, patient_name, event_type, old_status, new_status, timestamp, actor)
+            VALUES (?, ?, 'booking_arrived', NULL, 'checked_in', ?, ?)
+            """,
+            (visit_id, appointment["patient_name"], created_at, actor),
+        )
+
+        cur.execute("COMMIT")
+    except Exception:
+        cur.execute("ROLLBACK")
+        raise
+    finally:
+        conn.close()
+
+    return jsonify({
+        "appointment_id": appointment_id,
+        "visit_id": visit_id,
+        "doctor_id": appointment["doctor_id"],
+        "queue_position": queue_position,
+    }), 201

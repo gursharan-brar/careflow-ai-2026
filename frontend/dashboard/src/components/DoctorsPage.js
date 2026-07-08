@@ -1,5 +1,6 @@
 import { useEffect, useState } from "react";
 import Header from "./Header";
+import Avatar from "./Avatar";
 
 const API_URL = process.env.REACT_APP_API_URL;
 const MAX_NAME_LENGTH = 100;
@@ -136,9 +137,9 @@ export default function DoctorsPage() {
 
   return (
     <div className="min-h-screen bg-c-bg">
-      <Header />
+      <Header title="Doctors" subtitle="Manage who's on shift today" />
 
-      <main className="max-w-7xl mx-auto px-6 py-8 space-y-6">
+      <main className="max-w-[1500px] px-10 py-10 space-y-8">
         {message && (
           <div
             className={`text-sm rounded-xl px-4 py-3 border ${
@@ -151,46 +152,56 @@ export default function DoctorsPage() {
           </div>
         )}
 
-        <div className="bg-white rounded-2xl shadow-lg border border-gray-100 overflow-hidden">
-          <div className="px-6 py-4 border-b border-gray-100">
-            <h2 className="text-lg font-semibold text-c-navy">Shift Management</h2>
-            <p className="text-sm text-gray-500 mt-1">
+        <div className="bg-white rounded-3xl shadow-lg border border-gray-100 overflow-hidden">
+          <div className="px-7 py-5 border-b border-gray-100">
+            <h2 className="text-xl font-bold text-c-navy">Shift Management</h2>
+            <p className="text-base text-gray-500 mt-1">
               Mark who is working today. Only on-shift doctors appear as assignment options in the queue.
             </p>
           </div>
 
-          <div className="p-6">
+          <div className="p-7">
             {loading ? (
-              <p className="text-sm text-gray-400">Loading doctors...</p>
+              <p className="text-base text-gray-400">Loading doctors...</p>
             ) : (
-              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-5">
                 {doctors.map((doctor) => {
                   const isOnShift = doctor.status === "on_shift";
                   return (
                     <div
                       key={doctor.id}
-                      className={`rounded-2xl border p-5 transition-colors ${
-                        isOnShift ? "border-c-teal/30 bg-c-teal/5" : "border-gray-100 bg-white opacity-70"
+                      className={`rounded-2xl border-2 p-6 transition-colors ${
+                        isOnShift ? "border-c-teal bg-c-teal/5" : "border-gray-200 bg-white"
                       }`}
                     >
-                      <div className="flex items-center gap-2 mb-1">
-                        <span
-                          className={`inline-block w-2 h-2 rounded-full ${
-                            isOnShift ? "bg-emerald-500" : "bg-gray-300"
-                          }`}
-                        />
-                        <h3 className="font-semibold text-c-navy">{doctor.name}</h3>
+                      <div className="flex items-center justify-between mb-4">
+                        <div className="flex items-center gap-3.5">
+                          <Avatar
+                            name={doctor.name}
+                            className={`w-14 h-14 text-base ${
+                              isOnShift ? "bg-c-teal text-white" : "bg-gray-200 text-gray-600"
+                            }`}
+                          />
+                          <h3 className="font-extrabold text-lg text-c-navy leading-tight">{doctor.name}</h3>
+                        </div>
                       </div>
-                      <p className={`text-sm mb-4 ${patientCountColor(doctor.active_patient_count)}`}>
+                      <span
+                        className={`inline-block px-3 py-1.5 rounded-full text-sm font-bold tracking-wide mb-4 ${
+                          isOnShift ? "bg-emerald-100 text-emerald-700" : "bg-gray-100 text-gray-500"
+                        }`}
+                      >
+                        {isOnShift ? "ON SHIFT" : "OFF SHIFT"}
+                      </span>
+                      <p className={`text-base font-semibold mb-5 ${patientCountColor(doctor.active_patient_count)}`}>
                         {doctor.active_patient_count} patient{doctor.active_patient_count === 1 ? "" : "s"} today
                       </p>
                       <button
                         type="button"
                         onClick={() => toggleShift(doctor)}
-                        className={`w-full h-10 rounded-lg text-sm font-medium transition-colors ${
+                        className={`w-full h-12 rounded-xl text-base font-bold transition-colors ${
                           isOnShift
                             ? "bg-c-teal text-white hover:bg-c-teal-hover"
-                            : "bg-gray-100 text-gray-600 hover:bg-gray-200"
+                            : "bg-gray-100 text-gray-700 hover:bg-gray-200"
                         }`}
                       >
                         {isOnShift ? "Mark Off Shift" : "Mark On Shift"}
@@ -203,13 +214,13 @@ export default function DoctorsPage() {
           </div>
         </div>
 
-        <div className="bg-white rounded-2xl shadow-lg border border-gray-100 overflow-hidden">
-          <div className="px-6 py-4 border-b border-gray-100">
-            <h2 className="text-lg font-semibold text-c-navy">Roster Management</h2>
+        <div className="bg-white rounded-3xl shadow-lg border border-gray-100 overflow-hidden">
+          <div className="px-7 py-5 border-b border-gray-100">
+            <h2 className="text-xl font-bold text-c-navy">Roster Management</h2>
           </div>
 
-          <div className="p-6 space-y-6">
-            <form onSubmit={addDoctor} className="flex gap-2">
+          <div className="p-7 space-y-7">
+            <form onSubmit={addDoctor} className="flex gap-3">
               <input
                 type="text"
                 value={newDoctorName}
@@ -217,28 +228,28 @@ export default function DoctorsPage() {
                 placeholder="New doctor name"
                 maxLength={MAX_NAME_LENGTH}
                 disabled={adding}
-                className="flex-1 px-3 py-2 text-sm border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-c-teal"
+                className="flex-1 px-4 py-3 text-base border border-gray-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-c-teal"
               />
               <button
                 type="submit"
                 disabled={adding || !newDoctorName.trim()}
-                className="px-4 py-2 text-sm font-medium rounded-lg bg-c-teal text-white hover:bg-c-teal-hover disabled:bg-c-teal/50 disabled:cursor-not-allowed"
+                className="px-5 py-3 text-base font-bold rounded-xl bg-c-teal text-white hover:bg-c-teal-hover disabled:bg-c-teal/50 disabled:cursor-not-allowed"
               >
                 Add Doctor
               </button>
             </form>
 
             {loading ? (
-              <p className="text-sm text-gray-400">Loading roster...</p>
+              <p className="text-base text-gray-400">Loading roster...</p>
             ) : (
               <ul className="divide-y divide-gray-100">
                 {doctors.map((doctor) => {
                   const hasActivePatients = doctor.active_patient_count > 0;
                   return (
-                    <li key={doctor.id} className="flex items-center justify-between py-3">
+                    <li key={doctor.id} className="flex items-center justify-between py-4">
                       <div>
-                        <p className="font-medium text-gray-900">{doctor.name}</p>
-                        <p className="text-xs text-gray-400">
+                        <p className="font-semibold text-base text-gray-900">{doctor.name}</p>
+                        <p className="text-sm text-gray-400 mt-0.5">
                           {doctor.status === "on_shift" ? "On shift" : "Off shift"} ·{" "}
                           {doctor.active_patient_count} active patient{doctor.active_patient_count === 1 ? "" : "s"}
                         </p>
@@ -252,7 +263,7 @@ export default function DoctorsPage() {
                             ? "Reassign this doctor's active patients before marking them inactive"
                             : undefined
                         }
-                        className="text-sm font-medium text-gray-500 hover:text-red-600 disabled:text-gray-300 disabled:cursor-not-allowed disabled:hover:text-gray-300"
+                        className="text-base font-semibold text-gray-500 hover:text-red-600 disabled:text-gray-300 disabled:cursor-not-allowed disabled:hover:text-gray-300"
                       >
                         Mark Inactive
                       </button>

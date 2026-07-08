@@ -1,9 +1,10 @@
+import json
 import re
 from flask import Blueprint, request, jsonify
 
 from db import get_db, get_db_for_transaction, generate_id, calculate_wait, get_next_queue_position, now_iso
 from mail import send_welcome_email
-from triage import classify_triage
+from triage import classify_triage, TRIAGE_QUESTIONS
 from rate_limit import limiter
 
 checkin_bp = Blueprint("checkin", __name__)
@@ -105,6 +106,19 @@ def triage():
     if visit["triage_summary"]:
         conn.close()
         return jsonify({"error": "triage has already been submitted for this visit"}), 409
+
+    # Persisted before the Claude call so the patient's raw answers are never
+    # lost if classify_triage() raises (network error, bad response, etc).
+    questions = TRIAGE_QUESTIONS.get(visit["visit_type"], TRIAGE_QUESTIONS["general"])
+    triage_answers = json.dumps([
+        {"question": questions[i], "answer": symptom_answers[i]}
+        for i in range(min(len(questions), len(symptom_answers)))
+    ])
+    cur.execute(
+        "UPDATE visits SET triage_answers = ?, updated_at = ? WHERE id = ?",
+        (triage_answers, now_iso(), visit_id),
+    )
+    conn.commit()
 
     result = classify_triage(visit["visit_type"], symptom_answers)
     updated_at = now_iso()

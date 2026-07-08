@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState } from "react";
 import { Link } from "react-router-dom";
 import Shimmer from "./Shimmer";
+import Avatar from "./Avatar";
 import { STATUS_LABELS } from "../constants";
 
 const API_URL = process.env.REACT_APP_API_URL;
@@ -27,6 +28,13 @@ const PRIORITY_CARD_ACCENT = {
 };
 
 const PRIORITY_CARD_ACCENT_FALLBACK = "border-l-4 border-l-transparent";
+
+function formatSlotLabel(slotTime) {
+  const [h, m] = slotTime.split(":").map(Number);
+  const period = h >= 12 ? "PM" : "AM";
+  const hour12 = h % 12 || 12;
+  return `${hour12}:${m.toString().padStart(2, "0")} ${period}`;
+}
 
 // Wait time itself is a second, independent signal — a routine patient who has been
 // waiting a long time still deserves attention. Thresholds are rough operational
@@ -76,7 +84,7 @@ function PriorityBadge({ priority }) {
   const config = PRIORITY_BADGES[priority] || PRIORITY_FALLBACK;
   return (
     <span
-      className={`inline-block px-2.5 py-0.5 rounded-full text-xs font-semibold border whitespace-nowrap ${config.className}`}
+      className={`inline-block px-3 py-1 rounded-full text-xs font-bold border whitespace-nowrap ${config.className}`}
     >
       {config.label}
     </span>
@@ -103,13 +111,13 @@ function PatientActionButtons({ visit, onUpdateStatus }) {
     return null;
   }
   return (
-    <div className="flex flex-wrap gap-1.5 mt-2">
+    <div className="flex flex-wrap gap-2 mt-3">
       {transitions.map((targetStatus) => (
         <button
           key={targetStatus}
           type="button"
           onClick={() => onUpdateStatus(visit.visit_id, targetStatus)}
-          className="h-7 px-2.5 rounded-md bg-c-teal text-white text-xs font-medium transition-colors hover:bg-c-teal-hover focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-c-teal focus-visible:ring-offset-1"
+          className="h-9 px-3.5 rounded-lg bg-c-teal text-white text-sm font-semibold transition-colors hover:bg-c-teal-hover focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-c-teal focus-visible:ring-offset-1"
         >
           {STATUS_BUTTON_LABELS[targetStatus]}
         </button>
@@ -124,29 +132,30 @@ function DoctorLane({ lane, isDragOver, onDragOver, onDragLeave, onDrop, onDragS
       onDragOver={(e) => onDragOver(e, lane.doctorId)}
       onDragLeave={onDragLeave}
       onDrop={(e) => onDrop(e, lane.doctorId)}
-      className={`rounded-xl border flex flex-col transition-colors ${
+      className={`rounded-2xl border flex flex-col transition-colors ${
         isDragOver ? "border-c-teal bg-c-teal/5" : "border-gray-100"
       }`}
     >
-      <div className="px-4 py-3 border-b border-gray-100 flex items-center justify-between">
-        <div className="flex items-center gap-2">
-          <span className={`inline-block w-2 h-2 rounded-full ${laneIndicatorClassName(lane.patients.length)}`} />
-          <h3 className="font-semibold text-c-navy text-sm">{lane.doctorName}</h3>
+      <div className="px-5 py-4 border-b border-gray-100 flex items-center justify-between">
+        <div className="flex items-center gap-3">
+          <Avatar name={lane.doctorName} className="w-9 h-9 text-sm bg-c-navy/10 text-c-navy" />
+          <h3 className="font-extrabold text-c-navy text-base">{lane.doctorName}</h3>
+          <span className={`inline-block w-2.5 h-2.5 rounded-full ${laneIndicatorClassName(lane.patients.length)}`} />
         </div>
-        <span className="text-xs text-gray-500">
+        <span className="text-sm text-gray-500 font-medium">
           {lane.patients.length} patient{lane.patients.length === 1 ? "" : "s"}
         </span>
       </div>
 
       {!lane.isOnShift && (
-        <div className="px-4 py-2 bg-amber-50 border-b border-amber-100 text-xs text-amber-700">
+        <div className="px-5 py-2.5 bg-amber-50 border-b border-amber-100 text-sm text-amber-700 font-medium">
           {lane.doctorName} is now off shift — patients still assigned.
         </div>
       )}
 
-      <div className="p-3 space-y-2 flex-1">
+      <div className="p-4 space-y-3 flex-1">
         {lane.patients.length === 0 ? (
-          <p className="text-xs text-gray-400 px-1 py-2">No patients assigned yet</p>
+          <p className="text-sm text-gray-400 px-1 py-3">No patients assigned yet</p>
         ) : (
           lane.patients.map((visit) => (
             <div
@@ -154,20 +163,32 @@ function DoctorLane({ lane, isDragOver, onDragOver, onDragLeave, onDrop, onDragS
               draggable
               data-visit-id={visit.visit_id}
               onDragStart={(e) => onDragStart(e, visit.visit_id)}
-              className={`rounded-lg border border-gray-100 p-3 cursor-grab active:cursor-grabbing hover:border-gray-200 ${
+              className={`rounded-xl border border-gray-100 p-4 cursor-grab active:cursor-grabbing hover:border-gray-200 ${
                 PRIORITY_CARD_ACCENT[visit.priority_level] || PRIORITY_CARD_ACCENT_FALLBACK
               }`}
             >
-              <div className="flex items-center justify-between mb-1">
-                <span className="text-xs font-medium text-c-navy">#{visit.doctor_position}</span>
+              <div className="flex items-center justify-between mb-2.5">
+                <div className="flex items-center gap-2">
+                  <span className="text-sm font-bold text-c-navy">#{visit.doctor_position}</span>
+                  {visit.booked_slot_time && (
+                    <span className="inline-block px-2 py-0.5 rounded text-[11px] font-bold bg-c-teal/10 text-c-teal">
+                      Booked {formatSlotLabel(visit.booked_slot_time)}
+                    </span>
+                  )}
+                </div>
                 <PriorityBadge priority={visit.priority_level} />
               </div>
-              <p className="font-semibold text-gray-900 text-sm">{visit.name}</p>
-              <p className="text-xs text-gray-500">
-                {VISIT_TYPE_LABELS[visit.visit_type] || visit.visit_type} · {STATUS_LABELS[visit.status] || visit.status}
-                {" · "}
-                <span className={getWaitClassName(visit.estimated_wait)}>{visit.estimated_wait} min</span>
-              </p>
+              <div className="flex items-center gap-3">
+                <Avatar name={visit.name} className="w-9 h-9 text-sm bg-c-teal/10 text-c-teal" />
+                <div className="min-w-0">
+                  <p className="font-bold text-gray-900 text-base truncate">{visit.name}</p>
+                  <p className="text-sm text-gray-500">
+                    {VISIT_TYPE_LABELS[visit.visit_type] || visit.visit_type} · {STATUS_LABELS[visit.status] || visit.status}
+                    {" · "}
+                    <span className={getWaitClassName(visit.estimated_wait)}>{visit.estimated_wait} min</span>
+                  </p>
+                </div>
+              </div>
               <PatientActionButtons visit={visit} onUpdateStatus={onUpdateStatus} />
             </div>
           ))
@@ -252,8 +273,18 @@ export default function QueuePanel({ queue, loading, setQueue, onShiftDoctors, d
   if (loading || doctorsLoading) {
     return (
       <div className="text-c-text">
-        <div className="px-6 py-4 border-b border-gray-100">
-          <h2 className="text-lg font-semibold text-c-navy">Live Queue</h2>
+        <div className="px-7 py-5 border-b border-gray-100 flex items-center gap-3">
+          <span className="w-10 h-10 rounded-xl bg-c-teal/10 text-c-teal flex items-center justify-center">
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+              <line x1="8" y1="6" x2="20" y2="6"></line>
+              <line x1="8" y1="12" x2="20" y2="12"></line>
+              <line x1="8" y1="18" x2="20" y2="18"></line>
+              <circle cx="4" cy="6" r="1.5"></circle>
+              <circle cx="4" cy="12" r="1.5"></circle>
+              <circle cx="4" cy="18" r="1.5"></circle>
+            </svg>
+          </span>
+          <h2 className="text-xl font-bold text-c-navy">Live Queue</h2>
         </div>
         <SkeletonBlock />
       </div>
@@ -299,22 +330,32 @@ export default function QueuePanel({ queue, loading, setQueue, onShiftDoctors, d
 
   return (
     <div className="text-c-text">
-      <div className="px-6 py-4 border-b border-gray-100">
-        <h2 className="text-lg font-semibold text-c-navy">Live Queue</h2>
+      <div className="px-7 py-5 border-b border-gray-100 flex items-center gap-3">
+        <span className="w-10 h-10 rounded-xl bg-c-teal/10 text-c-teal flex items-center justify-center">
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+            <line x1="8" y1="6" x2="20" y2="6"></line>
+            <line x1="8" y1="12" x2="20" y2="12"></line>
+            <line x1="8" y1="18" x2="20" y2="18"></line>
+            <circle cx="4" cy="6" r="1.5"></circle>
+            <circle cx="4" cy="12" r="1.5"></circle>
+            <circle cx="4" cy="18" r="1.5"></circle>
+          </svg>
+        </span>
+        <h2 className="text-xl font-bold text-c-navy">Live Queue</h2>
       </div>
 
-      <div className="p-6 space-y-6">
+      <div className="p-7 space-y-7">
         <div
           onDragOver={(e) => handleDragOver(e, "unassigned")}
           onDragLeave={handleDragLeave}
           onDrop={(e) => handleDrop(e, null)}
-          className={`rounded-xl border transition-colors ${
+          className={`rounded-2xl border transition-colors ${
             dragOverTarget === "unassigned" ? "border-c-teal bg-c-teal/5" : "border-gray-100"
           }`}
         >
-          <div className="px-4 py-3">
+          <div className="px-5 py-4">
             <h3
-              className={`text-sm font-semibold ${
+              className={`text-base font-bold ${
                 unassigned.length > 0 ? "text-amber-700" : "text-gray-400"
               }`}
             >
@@ -323,19 +364,19 @@ export default function QueuePanel({ queue, loading, setQueue, onShiftDoctors, d
           </div>
 
           {unassigned.length === 0 ? (
-            <p className="px-4 pb-4 text-sm text-gray-400">All patients assigned</p>
+            <p className="px-5 pb-5 text-base text-gray-400">All patients assigned</p>
           ) : (
             <div className="overflow-x-auto pb-2">
               <table className="min-w-full border-collapse">
                 <thead>
-                  <tr className="text-xs uppercase tracking-wide text-gray-500">
-                    <th className="text-left px-4 py-2 font-medium">Position</th>
-                    <th className="text-left px-4 py-2 font-medium">Patient Name</th>
-                    <th className="text-left px-4 py-2 font-medium">Visit Type</th>
-                    <th className="text-left px-4 py-2 font-medium">Priority</th>
-                    <th className="text-left px-4 py-2 font-medium">Status</th>
-                    <th className="text-left px-4 py-2 font-medium">Wait</th>
-                    <th className="text-left px-4 py-2 font-medium">Assign To</th>
+                  <tr className="text-sm uppercase tracking-wide text-gray-500">
+                    <th className="text-left px-5 py-3 font-bold">Position</th>
+                    <th className="text-left px-5 py-3 font-bold">Patient Name</th>
+                    <th className="text-left px-5 py-3 font-bold">Visit Type</th>
+                    <th className="text-left px-5 py-3 font-bold">Priority</th>
+                    <th className="text-left px-5 py-3 font-bold">Status</th>
+                    <th className="text-left px-5 py-3 font-bold">Wait</th>
+                    <th className="text-left px-5 py-3 font-bold">Assign To</th>
                   </tr>
                 </thead>
                 <tbody>
@@ -345,21 +386,26 @@ export default function QueuePanel({ queue, loading, setQueue, onShiftDoctors, d
                       draggable
                       data-visit-id={visit.visit_id}
                       onDragStart={(e) => handleDragStart(e, visit.visit_id)}
-                      className="h-12 border-t border-gray-100 hover:bg-gray-50 cursor-grab active:cursor-grabbing"
+                      className="h-16 border-t border-gray-100 hover:bg-gray-50 cursor-grab active:cursor-grabbing"
                     >
-                      <td className="px-4 font-medium text-c-navy">{visit.queue_position}</td>
-                      <td className="px-4 font-semibold text-gray-900">{visit.name}</td>
-                      <td className="px-4 text-gray-500">
+                      <td className="px-5 font-bold text-base text-c-navy">{visit.queue_position}</td>
+                      <td className="px-5">
+                        <div className="flex items-center gap-3">
+                          <Avatar name={visit.name} className="w-9 h-9 text-sm bg-c-teal/10 text-c-teal" />
+                          <span className="font-bold text-base text-gray-900">{visit.name}</span>
+                        </div>
+                      </td>
+                      <td className="px-5 text-base text-gray-500">
                         {VISIT_TYPE_LABELS[visit.visit_type] || visit.visit_type}
                       </td>
-                      <td className="px-4">
+                      <td className="px-5">
                         <PriorityBadge priority={visit.priority_level} />
                       </td>
-                      <td className="px-4 text-gray-500">{STATUS_LABELS[visit.status] || visit.status}</td>
-                      <td className="px-4 text-amber-600 text-sm font-medium whitespace-nowrap">
+                      <td className="px-5 text-base text-gray-500">{STATUS_LABELS[visit.status] || visit.status}</td>
+                      <td className="px-5 text-amber-600 text-base font-semibold whitespace-nowrap">
                         Awaiting assignment
                       </td>
-                      <td className="px-4">
+                      <td className="px-5">
                         <select
                           defaultValue=""
                           onChange={(e) => {
@@ -368,7 +414,7 @@ export default function QueuePanel({ queue, loading, setQueue, onShiftDoctors, d
                             }
                           }}
                           disabled={onShiftDoctors.length === 0}
-                          className="text-sm border border-gray-300 rounded-lg px-2 py-1.5 focus:outline-none focus:ring-2 focus:ring-c-teal disabled:bg-gray-50 disabled:cursor-not-allowed"
+                          className="text-base border border-gray-300 rounded-xl px-3 py-2 focus:outline-none focus:ring-2 focus:ring-c-teal disabled:bg-gray-50 disabled:cursor-not-allowed"
                         >
                           <option value="" disabled>
                             Assign a doctor...
@@ -389,15 +435,15 @@ export default function QueuePanel({ queue, loading, setQueue, onShiftDoctors, d
         </div>
 
         {onShiftDoctors.length === 0 ? (
-          <div className="text-center py-10 px-4 border border-dashed border-gray-200 rounded-xl">
-            <p className="text-gray-500 text-sm mb-2">No doctors on shift yet.</p>
-            <Link to="/doctors" className="text-c-teal text-sm font-medium hover:underline">
+          <div className="text-center py-12 px-4 border border-dashed border-gray-200 rounded-2xl">
+            <p className="text-gray-500 text-base mb-2">No doctors on shift yet.</p>
+            <Link to="/doctors" className="text-c-teal text-base font-semibold hover:underline">
               Go to the Doctors page to mark who is working today.
             </Link>
           </div>
         ) : (
           <div
-            className={`grid gap-4 grid-cols-1 sm:grid-cols-2 ${
+            className={`grid gap-5 grid-cols-1 sm:grid-cols-2 ${
               onShiftLanes.length > 2 ? "lg:grid-cols-3" : ""
             }`}
           >
@@ -417,7 +463,7 @@ export default function QueuePanel({ queue, loading, setQueue, onShiftDoctors, d
         )}
 
         {ghostLanes.length > 0 && (
-          <div className="grid gap-4 grid-cols-1 sm:grid-cols-2">
+          <div className="grid gap-5 grid-cols-1 sm:grid-cols-2">
             {ghostLanes.map((lane) => (
               <DoctorLane
                 key={lane.doctorId}
@@ -438,7 +484,7 @@ export default function QueuePanel({ queue, loading, setQueue, onShiftDoctors, d
         <div
           role="status"
           aria-live="polite"
-          className="fixed bottom-4 right-4 bg-white shadow-xl rounded-xl border border-gray-100 px-4 py-3 text-sm font-medium text-gray-700 animate-fade-out"
+          className="fixed bottom-6 right-6 bg-white shadow-xl rounded-2xl border border-gray-100 px-5 py-4 text-base font-semibold text-gray-700 animate-fade-out"
         >
           {toast}
         </div>

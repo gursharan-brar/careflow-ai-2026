@@ -29,9 +29,8 @@ function SkeletonRow() {
 export default function BookingsPanel() {
   const [bookings, setBookings] = useState([]);
   const [loading, setLoading] = useState(true);
-  // Client-side-only "arrived" marker — real queue linkage via appointments.visit_id
-  // is a separate, deferred feature, so this just flags the row visually for now.
-  const [arrivedIds, setArrivedIds] = useState(new Set());
+  const [arrivingId, setArrivingId] = useState(null);
+  const [message, setMessage] = useState(null);
 
   useEffect(() => {
     let isMounted = true;
@@ -66,8 +65,31 @@ export default function BookingsPanel() {
     };
   }, []);
 
-  function markArrived(id) {
-    setArrivedIds((prev) => new Set(prev).add(id));
+  // Arrived moves the patient straight into their booked doctor's queue lane,
+  // tagged with the original slot time so they sort ahead of walk-ins —
+  // see POST /api/appointments/<id>/arrive. This is a real, committed action
+  // (not a local-only marker), so the row disappears from this list on success.
+  async function markArrived(id) {
+    setMessage(null);
+    setArrivingId(id);
+    try {
+      const response = await fetch(`${API_URL}/api/appointments/${id}/arrive`, {
+        method: "POST",
+        credentials: "include",
+      });
+      const data = await response.json().catch(() => ({}));
+
+      if (!response.ok) {
+        setMessage({ type: "error", text: data.error || "Could not check in this patient." });
+        return;
+      }
+
+      setBookings((prev) => prev.filter((b) => b.id !== id));
+    } catch {
+      setMessage({ type: "error", text: "Could not reach the server. Please try again." });
+    } finally {
+      setArrivingId(null);
+    }
   }
 
   async function cancelBooking(id) {
@@ -89,20 +111,34 @@ export default function BookingsPanel() {
 
   return (
     <div className="text-c-text">
-      <div className="px-6 py-4 border-b border-gray-100">
-        <h2 className="text-lg font-semibold text-c-navy">Today's Bookings</h2>
+      <div className="px-7 py-5 border-b border-gray-100 flex items-center gap-3">
+        <span className="w-10 h-10 rounded-xl bg-c-teal/10 text-c-teal flex items-center justify-center">
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+            <rect x="3" y="4" width="18" height="18" rx="2"></rect>
+            <line x1="16" y1="2" x2="16" y2="6"></line>
+            <line x1="8" y1="2" x2="8" y2="6"></line>
+            <line x1="3" y1="10" x2="21" y2="10"></line>
+          </svg>
+        </span>
+        <h2 className="text-xl font-bold text-c-navy">Today's Bookings</h2>
       </div>
+
+      {message && (
+        <div className="px-7 pt-4 text-base text-red-700 bg-red-50 border-b border-red-100 py-3">
+          {message.text}
+        </div>
+      )}
 
       {loading ? (
         <div className="overflow-x-auto">
           <table className="min-w-full border-collapse">
             <thead className="bg-c-navy text-white">
               <tr>
-                <th className="text-left px-4 py-3 text-xs uppercase tracking-wide font-medium">Time</th>
-                <th className="text-left px-4 py-3 text-xs uppercase tracking-wide font-medium">Doctor</th>
-                <th className="text-left px-4 py-3 text-xs uppercase tracking-wide font-medium">Patient Name</th>
-                <th className="text-left px-4 py-3 text-xs uppercase tracking-wide font-medium">Status</th>
-                <th className="text-left px-4 py-3 text-xs uppercase tracking-wide font-medium">Actions</th>
+                <th className="text-left px-5 py-4 text-sm uppercase tracking-wide font-bold">Time</th>
+                <th className="text-left px-5 py-4 text-sm uppercase tracking-wide font-bold">Doctor</th>
+                <th className="text-left px-5 py-4 text-sm uppercase tracking-wide font-bold">Patient Name</th>
+                <th className="text-left px-5 py-4 text-sm uppercase tracking-wide font-bold">Status</th>
+                <th className="text-left px-5 py-4 text-sm uppercase tracking-wide font-bold">Actions</th>
               </tr>
             </thead>
             <tbody>
@@ -112,50 +148,45 @@ export default function BookingsPanel() {
           </table>
         </div>
       ) : bookings.length === 0 ? (
-        <p className="px-6 py-8 text-sm text-gray-400">No bookings for today</p>
+        <p className="px-7 py-10 text-base text-gray-400">No bookings for today</p>
       ) : (
         <div className="overflow-x-auto">
           <table className="min-w-full border-collapse">
             <thead className="bg-c-navy text-white">
               <tr>
-                <th className="text-left px-4 py-3 text-xs uppercase tracking-wide font-medium">Time</th>
-                <th className="text-left px-4 py-3 text-xs uppercase tracking-wide font-medium">Doctor</th>
-                <th className="text-left px-4 py-3 text-xs uppercase tracking-wide font-medium">Patient Name</th>
-                <th className="text-left px-4 py-3 text-xs uppercase tracking-wide font-medium">Status</th>
-                <th className="text-left px-4 py-3 text-xs uppercase tracking-wide font-medium">Actions</th>
+                <th className="text-left px-5 py-4 text-sm uppercase tracking-wide font-bold">Time</th>
+                <th className="text-left px-5 py-4 text-sm uppercase tracking-wide font-bold">Doctor</th>
+                <th className="text-left px-5 py-4 text-sm uppercase tracking-wide font-bold">Patient Name</th>
+                <th className="text-left px-5 py-4 text-sm uppercase tracking-wide font-bold">Status</th>
+                <th className="text-left px-5 py-4 text-sm uppercase tracking-wide font-bold">Actions</th>
               </tr>
             </thead>
             <tbody>
               {bookings.map((booking) => {
-                const hasArrived = arrivedIds.has(booking.id);
+                const isArriving = arrivingId === booking.id;
                 return (
-                  <tr key={booking.id} className="h-14 bg-white border-b border-gray-100 hover:bg-gray-50">
-                    <td className="px-4 font-medium text-c-navy">{formatSlotLabel(booking.slot_time)}</td>
-                    <td className="px-4 text-gray-700">{booking.doctor_name}</td>
-                    <td className="px-4 font-semibold text-gray-900">{booking.patient_name}</td>
-                    <td className="px-4 text-sm">
-                      {hasArrived ? (
-                        <span className="inline-block px-2.5 py-0.5 rounded-full text-xs font-semibold bg-c-routine-bg text-c-routine-text border border-green-200">
-                          ARRIVED
-                        </span>
-                      ) : (
-                        <span className="text-gray-500">Confirmed</span>
-                      )}
+                  <tr key={booking.id} className="h-16 bg-white border-b border-gray-100 hover:bg-gray-50">
+                    <td className="px-5 font-bold text-base text-c-navy">{formatSlotLabel(booking.slot_time)}</td>
+                    <td className="px-5 text-base text-gray-700">{booking.doctor_name}</td>
+                    <td className="px-5 font-bold text-base text-gray-900">{booking.patient_name}</td>
+                    <td className="px-5 text-base">
+                      <span className="text-gray-500">Confirmed</span>
                     </td>
-                    <td className="px-4">
-                      <div className="flex gap-1.5">
+                    <td className="px-5">
+                      <div className="flex gap-2">
                         <button
                           type="button"
                           onClick={() => markArrived(booking.id)}
-                          disabled={hasArrived}
-                          className="h-7 px-2.5 rounded-md bg-c-teal text-white text-xs font-medium transition-colors hover:bg-c-teal-hover disabled:bg-c-teal/40 disabled:cursor-not-allowed"
+                          disabled={isArriving}
+                          className="h-9 px-3.5 rounded-lg bg-c-teal text-white text-sm font-semibold transition-colors hover:bg-c-teal-hover disabled:bg-c-teal/40 disabled:cursor-not-allowed"
                         >
-                          Arrived
+                          {isArriving ? "Checking in…" : "Arrived"}
                         </button>
                         <button
                           type="button"
                           onClick={() => cancelBooking(booking.id)}
-                          className="h-7 px-2.5 rounded-md bg-gray-100 text-gray-600 text-xs font-medium transition-colors hover:bg-gray-200"
+                          disabled={isArriving}
+                          className="h-9 px-3.5 rounded-lg bg-gray-100 text-gray-600 text-sm font-semibold transition-colors hover:bg-gray-200 disabled:cursor-not-allowed"
                         >
                           Cancel
                         </button>

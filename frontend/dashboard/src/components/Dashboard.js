@@ -2,7 +2,6 @@ import { useEffect, useState } from 'react';
 import QueuePanel from './QueuePanel';
 import HealthPanel from './HealthPanel';
 import StatsBar from './StatsBar';
-import AuditLog from './AuditLog';
 import BookingsPanel from './BookingsPanel';
 import Header from './Header';
 
@@ -101,10 +100,10 @@ export default function Dashboard() {
   }
 
   const rightSlot = (
-    <div className="flex items-center gap-2 text-sm text-white/80">
-      <span className="relative flex h-2 w-2">
-        <span className="absolute inline-flex h-full w-full rounded-full bg-green-400 animate-pulse" />
-        <span className="relative inline-flex h-2 w-2 rounded-full bg-green-400" />
+    <div className="flex items-center gap-2.5 text-base text-gray-500 font-medium">
+      <span className="relative flex h-2.5 w-2.5">
+        <span className="absolute inline-flex h-full w-full rounded-full bg-emerald-400 animate-pulse" />
+        <span className="relative inline-flex h-2.5 w-2.5 rounded-full bg-emerald-500" />
       </span>
       {lastRefreshed
         ? `Last refreshed ${lastRefreshed.toLocaleTimeString()}`
@@ -114,12 +113,12 @@ export default function Dashboard() {
 
   return (
     <div className="min-h-screen bg-c-bg">
-      <Header rightSlot={rightSlot} />
+      <Header title="Dashboard" subtitle="Live queue, today's bookings, and clinic activity" rightSlot={rightSlot} />
 
-      <main className="max-w-7xl mx-auto px-6 py-8 space-y-6">
+      <main className="max-w-[1500px] px-10 py-10 space-y-8">
         <StatsBar patients={queue} onShiftCount={doctorsLoading ? null : onShiftDoctors.length} />
 
-        <div className="bg-white rounded-2xl shadow-lg border border-gray-100 overflow-hidden">
+        <div className="bg-white rounded-3xl shadow-lg border border-gray-100 overflow-hidden">
           <QueuePanel
             queue={queue}
             loading={loading}
@@ -130,17 +129,12 @@ export default function Dashboard() {
           />
         </div>
 
-        <div className="bg-white rounded-2xl shadow-lg border border-gray-100 overflow-hidden">
+        <div className="bg-white rounded-3xl shadow-lg border border-gray-100 overflow-hidden">
           <BookingsPanel />
         </div>
 
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 items-start">
-          <div className="bg-white rounded-2xl shadow-lg border border-gray-100 overflow-hidden">
-            <HealthPanel />
-          </div>
-          <div className="bg-white rounded-2xl shadow-lg border border-gray-100 overflow-hidden">
-            <AuditLog />
-          </div>
+        <div className="bg-white rounded-3xl shadow-lg border border-gray-100 overflow-hidden">
+          <HealthPanel />
         </div>
       </main>
     </div>

@@ -86,8 +86,16 @@ export default function AuditLog() {
 
   return (
     <div className="bg-white text-c-text">
-      <div className="px-6 py-4 border-b border-gray-100">
-        <h2 className="text-lg font-semibold text-c-navy">Audit Log</h2>
+      <div className="px-7 py-5 border-b border-gray-100 flex items-center gap-3">
+        <span className="w-10 h-10 rounded-xl bg-c-teal/10 text-c-teal flex items-center justify-center">
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+            <path d="M9 2h6l1 4H8l1-4z"></path>
+            <path d="M6 6h12v14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2V6z"></path>
+            <line x1="9" y1="11" x2="15" y2="11"></line>
+            <line x1="9" y1="15" x2="15" y2="15"></line>
+          </svg>
+        </span>
+        <h2 className="text-xl font-bold text-c-navy">Audit Log</h2>
       </div>
 
       {loading ? (
@@ -95,11 +103,11 @@ export default function AuditLog() {
           <table className="min-w-full border-collapse">
             <thead className="bg-c-navy text-white">
               <tr>
-                <th className="text-left px-4 py-3 text-xs uppercase tracking-wide font-medium">Timestamp</th>
-                <th className="text-left px-4 py-3 text-xs uppercase tracking-wide font-medium">Patient Name</th>
-                <th className="text-left px-4 py-3 text-xs uppercase tracking-wide font-medium">Event Type</th>
-                <th className="text-left px-4 py-3 text-xs uppercase tracking-wide font-medium">Old Status</th>
-                <th className="text-left px-4 py-3 text-xs uppercase tracking-wide font-medium">New Status</th>
+                <th className="text-left px-5 py-4 text-sm uppercase tracking-wide font-bold">Timestamp</th>
+                <th className="text-left px-5 py-4 text-sm uppercase tracking-wide font-bold">Patient Name</th>
+                <th className="text-left px-5 py-4 text-sm uppercase tracking-wide font-bold">Event Type</th>
+                <th className="text-left px-5 py-4 text-sm uppercase tracking-wide font-bold">Old Status</th>
+                <th className="text-left px-5 py-4 text-sm uppercase tracking-wide font-bold">New Status</th>
               </tr>
             </thead>
             <tbody>
@@ -112,9 +120,9 @@ export default function AuditLog() {
       ) : realEntries.length === 0 ? (
         <div className="text-center py-16 px-4">
           <hr className="border-t border-c-teal/30 mb-6 mx-auto w-32" />
-          <p className="text-gray-500 text-sm">No audit entries yet</p>
+          <p className="text-gray-500 text-base">No audit entries yet</p>
           {hiddenTestCount > 0 && (
-            <p className="text-gray-400 text-xs mt-2">
+            <p className="text-gray-400 text-sm mt-2">
               ({hiddenTestCount} test {hiddenTestCount === 1 ? "entry" : "entries"} hidden)
             </p>
           )}
@@ -123,7 +131,7 @@ export default function AuditLog() {
       ) : (
         <>
           {hiddenTestCount > 0 && (
-            <p className="px-6 pt-3 text-xs text-gray-400">
+            <p className="px-7 pt-4 text-sm text-gray-400">
               {hiddenTestCount} test {hiddenTestCount === 1 ? "entry" : "entries"} hidden
             </p>
           )}
@@ -131,25 +139,25 @@ export default function AuditLog() {
           <table className="min-w-full border-collapse">
             <thead className="sticky top-0 bg-c-navy text-white z-10">
               <tr>
-                <th className="text-left px-4 py-3 text-xs uppercase tracking-wide font-medium">Timestamp</th>
-                <th className="text-left px-4 py-3 text-xs uppercase tracking-wide font-medium">Patient Name</th>
-                <th className="text-left px-4 py-3 text-xs uppercase tracking-wide font-medium">Event Type</th>
-                <th className="text-left px-4 py-3 text-xs uppercase tracking-wide font-medium">Old Status</th>
-                <th className="text-left px-4 py-3 text-xs uppercase tracking-wide font-medium">New Status</th>
+                <th className="text-left px-5 py-4 text-sm uppercase tracking-wide font-bold">Timestamp</th>
+                <th className="text-left px-5 py-4 text-sm uppercase tracking-wide font-bold">Patient Name</th>
+                <th className="text-left px-5 py-4 text-sm uppercase tracking-wide font-bold">Event Type</th>
+                <th className="text-left px-5 py-4 text-sm uppercase tracking-wide font-bold">Old Status</th>
+                <th className="text-left px-5 py-4 text-sm uppercase tracking-wide font-bold">New Status</th>
               </tr>
             </thead>
             <tbody>
               {visibleEntries.map((entry) => (
-                <tr key={entry.id} className="h-14 bg-white border-b border-gray-100 hover:bg-gray-50">
-                  <td className="px-4 text-sm text-gray-500">{formatTimestamp(entry.timestamp)}</td>
-                  <td className="px-4 font-semibold text-gray-900">{entry.patient_name}</td>
-                  <td className="px-4 text-sm text-gray-600">
+                <tr key={entry.id} className="h-16 bg-white border-b border-gray-100 hover:bg-gray-50">
+                  <td className="px-5 text-base text-gray-500">{formatTimestamp(entry.timestamp)}</td>
+                  <td className="px-5 font-bold text-base text-gray-900">{entry.patient_name}</td>
+                  <td className="px-5 text-base text-gray-600">
                     {EVENT_TYPE_LABELS[entry.event_type] || entry.event_type}
                   </td>
-                  <td className="px-4 text-sm text-gray-600">
+                  <td className="px-5 text-base text-gray-600">
                     {STATUS_LABELS[entry.old_status] || entry.old_status}
                   </td>
-                  <td className="px-4 text-sm text-gray-600">
+                  <td className="px-5 text-base text-gray-600">
                     {STATUS_LABELS[entry.new_status] || entry.new_status}
                   </td>
                 </tr>
@@ -158,11 +166,11 @@ export default function AuditLog() {
           </table>
           </div>
           {hasMore && (
-            <div className="flex justify-center py-3 border-t border-gray-100">
+            <div className="flex justify-center py-4 border-t border-gray-100">
               <button
                 type="button"
                 onClick={() => setVisibleCount((count) => count + PAGE_SIZE)}
-                className="text-sm font-medium text-c-teal hover:text-c-teal-hover"
+                className="text-base font-semibold text-c-teal hover:text-c-teal-hover"
               >
                 Load more ({realEntries.length - visibleEntries.length} remaining)
               </button>

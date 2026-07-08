@@ -1,0 +1,408 @@
+/* Shared design tokens + base components for all patient-facing pages
+   (checkin.html, triage.html, status.html, booking.html). Keeps these
+   pages visually consistent with the dashboard and landing page without
+   duplicating the same CSS four times. Page-specific components (e.g.
+   booking.html's doctor cards, slot grid) stay in that page's own
+   <style> block and build on top of these tokens. */
+
+:root {
+  --c-navy: #1B3A6B;
+  --c-navy-deep: #122849;
+  --c-teal: #0D7377;
+  --c-teal-hover: #0a5f62;
+  --c-teal-soft: #E6F5F5;
+  --c-bg: #F4F6F8;
+  --c-white: #FFFFFF;
+  --c-text: #0F172A;
+  --c-text-muted: #64748B;
+  --c-border: #E2E8F0;
+  --c-success: #0D9488;
+  --c-success-bg: #ECFDF5;
+  --c-error: #DC2626;
+  --c-error-bg: #FEF2F2;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+body {
+  font-family: 'Inter', -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Arial, sans-serif;
+  background: var(--c-bg);
+  color: var(--c-text);
+  min-height: 100vh;
+  padding: 84px 16px 40px;
+  font-size: 16px;
+  margin: 0;
+}
+
+img, svg {
+  display: block;
+}
+
+/* Shared top nav, same on every patient-facing page */
+.site-nav {
+  background: var(--c-navy);
+  padding: 14px 28px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  z-index: 100;
+  box-sizing: border-box;
+}
+
+.site-nav-logo {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  color: var(--c-white);
+  font-weight: 700;
+  font-size: 17px;
+  letter-spacing: -0.01em;
+}
+
+.site-nav-logo .dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: var(--c-teal);
+  box-shadow: 0 0 0 4px rgba(13, 115, 119, 0.35);
+}
+
+.site-nav-back {
+  color: rgba(255, 255, 255, 0.92);
+  font-size: 13.5px;
+  font-weight: 600;
+  text-decoration: none;
+  border: 1.5px solid rgba(255, 255, 255, 0.3);
+  padding: 7px 14px;
+  border-radius: 8px;
+  transition: border-color 0.15s ease, background 0.15s ease;
+}
+
+.site-nav-back:hover {
+  border-color: rgba(255, 255, 255, 0.7);
+  background: rgba(255, 255, 255, 0.08);
+}
+
+/* Card container */
+.container {
+  background: var(--c-white);
+  border-radius: 16px;
+  box-shadow: 0 1px 2px rgba(15, 23, 42, 0.04), 0 12px 32px rgba(15, 23, 42, 0.08);
+  border: 1px solid var(--c-border);
+  padding: 36px 28px;
+  max-width: 480px;
+  width: 100%;
+  margin: 0 auto;
+  position: relative;
+  overflow: hidden;
+}
+
+.container::before {
+  content: "";
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: 4px;
+  background: linear-gradient(90deg, var(--c-teal), var(--c-navy));
+}
+
+h1 {
+  font-size: 24px;
+  font-weight: 700;
+  margin: 0 0 4px;
+  color: var(--c-navy);
+  letter-spacing: -0.01em;
+}
+
+.subtitle {
+  color: var(--c-text-muted);
+  margin-bottom: 24px;
+  font-size: 15px;
+  line-height: 1.5;
+}
+
+.field {
+  margin-bottom: 18px;
+}
+
+label {
+  display: block;
+  font-weight: 600;
+  margin-bottom: 6px;
+  font-size: 14px;
+  color: var(--c-text);
+}
+
+fieldset {
+  border: none;
+  padding: 0;
+  margin: 0 0 18px 0;
+}
+
+legend {
+  font-weight: 600;
+  margin-bottom: 8px;
+  font-size: 15px;
+  padding: 0;
+  color: var(--c-text);
+}
+
+input,
+select {
+  width: 100%;
+  padding: 12px 14px;
+  font-size: 16px;
+  font-family: inherit;
+  border: 1.5px solid var(--c-border);
+  border-radius: 9px;
+  min-height: 46px;
+  background: var(--c-white);
+  color: var(--c-text);
+}
+
+input:focus,
+select:focus {
+  outline: none;
+  border-color: var(--c-teal);
+  box-shadow: 0 0 0 3px rgba(13, 115, 119, 0.14);
+}
+
+input.invalid,
+select.invalid {
+  border-color: var(--c-error);
+}
+
+.radio-option {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 11px 14px;
+  border: 1.5px solid var(--c-border);
+  border-radius: 9px;
+  margin-bottom: 8px;
+  font-size: 14.5px;
+  cursor: pointer;
+  transition: border-color 0.15s ease, background 0.15s ease;
+}
+
+.radio-option:hover {
+  border-color: var(--c-teal);
+  background: var(--c-teal-soft);
+}
+
+.radio-option input[type="radio"] {
+  width: 18px;
+  height: 18px;
+  flex-shrink: 0;
+  accent-color: var(--c-teal);
+}
+
+.radio-option.invalid {
+  border-color: var(--c-error);
+}
+
+.error {
+  display: block;
+  color: var(--c-error);
+  font-size: 13px;
+  margin-top: 4px;
+  min-height: 17px;
+}
+
+button,
+.button {
+  width: 100%;
+  padding: 14px;
+  font-size: 15.5px;
+  font-weight: 600;
+  font-family: inherit;
+  border: none;
+  border-radius: 10px;
+  background: var(--c-teal);
+  color: var(--c-white);
+  cursor: pointer;
+  min-height: 46px;
+  text-align: center;
+  text-decoration: none;
+  display: inline-block;
+  transition: background 0.15s ease, transform 0.1s ease;
+}
+
+button:hover,
+.button:hover {
+  background: var(--c-teal-hover);
+}
+
+button:active,
+.button:active {
+  transform: translateY(1px);
+}
+
+button:disabled {
+  background: #99c6c8;
+  cursor: not-allowed;
+}
+
+.button-secondary {
+  background: var(--c-white);
+  color: var(--c-text);
+  border: 1.5px solid var(--c-border);
+}
+
+.button-secondary:hover {
+  background: #F8FAFC;
+}
+
+.hidden {
+  display: none;
+}
+
+#loading-screen {
+  text-align: center;
+  padding: 24px 0;
+}
+
+.spinner {
+  width: 38px;
+  height: 38px;
+  border: 3.5px solid var(--c-border);
+  border-top-color: var(--c-teal);
+  border-radius: 50%;
+  margin: 0 auto 16px;
+  animation: spin 0.8s linear infinite;
+}
+
+@keyframes spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+#confirmation-screen,
+#error-screen,
+#invalid-screen {
+  text-align: center;
+}
+
+.icon {
+  width: 56px;
+  height: 56px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 26px;
+  font-weight: 700;
+  margin: 0 auto 16px;
+  color: #fff;
+}
+
+.success-icon {
+  background: var(--c-success);
+}
+
+.error-icon {
+  background: var(--c-error);
+}
+
+.result-card {
+  background: #F8FAFC;
+  border: 1px solid var(--c-border);
+  border-radius: 10px;
+  padding: 16px;
+  margin: 20px 0;
+  text-align: left;
+}
+
+.result-row {
+  display: flex;
+  justify-content: space-between;
+  padding: 8px 0;
+  font-size: 15px;
+}
+
+.result-row + .result-row {
+  border-top: 1px solid var(--c-border);
+}
+
+.result-label {
+  color: var(--c-text-muted);
+}
+
+.result-value {
+  font-weight: 700;
+  color: var(--c-text);
+}
+
+.notice {
+  color: var(--c-text-muted);
+  font-size: 15px;
+  margin-bottom: 4px;
+  line-height: 1.5;
+}
+
+.refresh-note {
+  color: #94A3B8;
+  font-size: 12.5px;
+  text-align: center;
+  margin-top: 16px;
+}
+
+#error-message,
+#invalid-message {
+  color: var(--c-text-muted);
+  margin-bottom: 20px;
+  font-size: 15px;
+}
+
+.status-badge {
+  display: inline-block;
+  padding: 6px 14px;
+  border-radius: 999px;
+  font-size: 13px;
+  font-weight: 700;
+  margin-bottom: 20px;
+  letter-spacing: 0.01em;
+}
+
+.status-checked_in {
+  background: #DBEAFE;
+  color: #1D4ED8;
+}
+
+.status-called {
+  background: #FEF9C3;
+  color: #92400E;
+}
+
+.status-in_progress {
+  background: #EDE9FE;
+  color: #6D28D9;
+}
+
+.status-completed {
+  background: var(--c-success-bg);
+  color: #047857;
+}
+
+.status-no_show {
+  background: var(--c-error-bg);
+  color: #B91C1C;
+}
+
+@media (max-width: 480px) {
+  body {
+    padding: 76px 12px 24px;
+  }
+
+  .container {
+    padding: 28px 20px;
+  }
+}

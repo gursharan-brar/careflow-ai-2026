@@ -5,8 +5,10 @@ module.exports = {
     extend: {
       colors: {
         "c-navy": "var(--c-navy)",
+        "c-navy-deep": "var(--c-navy-deep)",
         "c-teal": "var(--c-teal)",
         "c-teal-hover": "var(--c-teal-hover)",
+        "c-teal-soft": "var(--c-teal-soft)",
         "c-bg": "var(--c-bg)",
         "c-white": "var(--c-white)",
         "c-text": "var(--c-text)",
