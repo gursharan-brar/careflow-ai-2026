@@ -53,7 +53,8 @@ def _get_visit_detail(cur, visit_id):
         """
         SELECT v.id, v.name, v.email, v.phone, v.visit_type, v.queue_position, v.priority_level,
                v.triage_summary, v.flag_reason, v.triage_answers, v.status, v.estimated_wait,
-               v.actual_wait, v.booked_slot_time, v.created_at, v.updated_at, d.name AS doctor_name
+               v.actual_wait, v.booked_slot_time, v.needs_doctor_reassignment, v.stale_slot_at_checkin,
+               v.created_at, v.updated_at, d.name AS doctor_name
         FROM visits v
         LEFT JOIN doctors d ON v.doctor_id = d.id
         WHERE v.id = ?
@@ -92,7 +93,12 @@ def _get_visit_detail(cur, visit_id):
     chat_log = [dict(row) for row in cur.fetchall()]
 
     cur.execute(
-        "SELECT slot_time, slot_date, status FROM appointments WHERE visit_id = ?",
+        """
+        SELECT a.slot_time, a.slot_date, a.status, a.doctor_id, d2.name AS doctor_name
+        FROM appointments a
+        LEFT JOIN doctors d2 ON a.doctor_id = d2.id
+        WHERE a.visit_id = ?
+        """,
         (visit_id,),
     )
     appointment_row = cur.fetchone()
@@ -114,6 +120,8 @@ def _get_visit_detail(cur, visit_id):
         "actual_wait": visit["actual_wait"],
         "doctor_name": visit["doctor_name"],
         "booked_slot_time": visit["booked_slot_time"],
+        "needs_doctor_reassignment": bool(visit["needs_doctor_reassignment"]),
+        "stale_slot_at_checkin": visit["stale_slot_at_checkin"],
         "created_at": visit["created_at"],
         "updated_at": visit["updated_at"],
         "audit_trail": audit_trail,

@@ -1,6 +1,6 @@
 import os
 import logging
-from datetime import datetime, timezone
+from datetime import datetime, timedelta, timezone
 
 from flask import Flask, jsonify, send_from_directory
 from flask_cors import CORS
@@ -10,6 +10,7 @@ from apscheduler.schedulers.background import BackgroundScheduler
 from db import init_db
 from mail import init_mail
 from health_feed import run_health_feed_job
+from analytics import run_weekly_analytics_job
 from rate_limit import limiter
 
 from routes.checkin import checkin_bp
@@ -24,6 +25,7 @@ from routes.config import config_bp
 from routes.doctors import doctors_bp
 from routes.appointments import appointments_bp
 from routes.patients import patients_bp
+from routes.analytics import analytics_bp
 
 load_dotenv()
 
@@ -56,6 +58,18 @@ def create_app():
     app.secret_key = os.environ.get("SECRET_KEY")
     app.config["SESSION_COOKIE_SAMESITE"] = "Lax"
     app.config["SESSION_COOKIE_SECURE"] = os.environ.get("FLASK_ENV") != "development"
+    # Flask's itsdangerous signer embeds a timestamp in every session cookie and
+    # checks it against this value on every request (flask/sessions.py's
+    # open_session -> max_age), regardless of session.permanent - a replayed cookie
+    # is rejected server-side the same way whether or not the browser would have
+    # honored its Expires header. Without this line Flask silently defaults to 31
+    # days. session.permanent = True at login (routes/auth.py) additionally makes
+    # the cookie's own Expires header match this window and turns it into a sliding
+    # idle-timeout (refreshed on each active request, per Flask's default
+    # SESSION_REFRESH_EACH_REQUEST=True) rather than a fixed one anchored to login.
+    app.config["PERMANENT_SESSION_LIFETIME"] = timedelta(
+        seconds=int(os.environ.get("SESSION_LIFETIME_SECONDS", 28800))
+    )
 
     CORS(app, supports_credentials=True, origins=ALLOWED_ORIGINS)
 
@@ -75,6 +89,7 @@ def create_app():
     app.register_blueprint(doctors_bp)
     app.register_blueprint(appointments_bp)
     app.register_blueprint(patients_bp)
+    app.register_blueprint(analytics_bp)
 
     @app.route("/api/ping")
     def ping():
@@ -122,21 +137,30 @@ def create_app():
 
 app = create_app()
 
-# Guard against the Werkzeug dev reloader importing this module twice (once in
-# the monitor process, once in the actual serving child) and starting two
-# competing schedulers. In production (gunicorn, no reloader) FLASK_ENV is not
-# "development" so this always starts exactly once on the single worker
-# defined in the Procfile. Coordinating a scheduler across multiple gunicorn
-# workers is a separate problem, deferred - see docs/SECURITY_NOTES.md.
-_is_reloader_child = os.environ.get("WERKZEUG_RUN_MAIN") == "true"
-_reloader_active = os.environ.get("FLASK_ENV") == "development"
-
-if _is_reloader_child or not _reloader_active:
-    scheduler = BackgroundScheduler()
-    scheduler.add_job(run_health_feed_job, "interval", hours=12, id="health_feed_job")
-    scheduler.start()
+# This used to guard against the Werkzeug dev reloader importing this module
+# twice (once in the monitor process, once in the actual serving child) and
+# starting two competing schedulers. Debug/reload is now hard-disabled below
+# (see the app.run() call) regardless of FLASK_ENV, so Werkzeug never spawns a
+# reloader child and this module is only ever imported once per process - the
+# scheduler always starts exactly once, the same way it already did in
+# production (gunicorn, no reloader, single worker per the Procfile).
+# Coordinating a scheduler across multiple gunicorn workers is a separate
+# problem, deferred - see docs/SECURITY_NOTES.md.
+scheduler = BackgroundScheduler()
+scheduler.add_job(run_health_feed_job, "interval", hours=12, id="health_feed_job")
+scheduler.add_job(run_weekly_analytics_job, "interval", days=7, id="weekly_analytics_job")
+scheduler.start()
 
 
 if __name__ == "__main__":
     port = int(os.environ.get("PORT", 5000))
-    app.run(host="0.0.0.0", port=port, debug=(os.environ.get("FLASK_ENV") == "development"))
+    # Hard override, independent of FLASK_ENV: the Werkzeug interactive debugger
+    # must never be reachable. /api/login and /api/checkin are both unauthenticated
+    # by design, so an unhandled exception on either path would otherwise hand an
+    # anonymous caller a remote-code-execution console. FLASK_ENV still governs
+    # CORS origins and the SESSION_COOKIE_SECURE relaxation above - only this one
+    # debug flag is hard-pinned, so re-adding FLASK_ENV=development later (for
+    # those other reasons) can't silently turn this back on. gunicorn (see
+    # Procfile) never executes this __main__ block at all, so it is unaffected
+    # either way.
+    app.run(host="0.0.0.0", port=port, debug=False)

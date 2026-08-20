@@ -1,4 +1,5 @@
 import os
+import re
 import math
 import logging
 import sqlite3
@@ -8,6 +9,11 @@ from datetime import datetime, timezone
 logger = logging.getLogger(__name__)
 
 DATABASE_PATH = os.environ.get("DATABASE_PATH", "careflow.db")
+
+# Alberta Personal Health Number (PHN) format: exactly 9 digits, numeric only.
+# Shared between routes/checkin.py and routes/appointments.py so both entry
+# points enforce the identical format check.
+HEALTH_ID_REGEX = re.compile(r"^\d{9}$")
 
 WAIT_TIMES = {
     "gp_consult": 15,
@@ -129,6 +135,17 @@ def init_db():
         )
     """)
 
+    # Same shape/pattern as health_feed above: one row per generation, most
+    # recent read by ORDER BY id DESC LIMIT 1 (see routes/analytics.py).
+    cur.execute("""
+        CREATE TABLE IF NOT EXISTS weekly_analytics (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            stats_json TEXT,
+            summary_text TEXT,
+            generated_at TEXT
+        )
+    """)
+
     cur.execute("""
         CREATE TABLE IF NOT EXISTS audit_log (
             id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -186,6 +203,17 @@ def init_db():
                 )
             """)
 
+    # Re-checked fresh (not reusing appointment_columns above) since the legacy
+    # DROP/CREATE branch just above may have just rebuilt the table without it.
+    cur.execute("PRAGMA table_info(appointments)")
+    appointment_columns = {row["name"] for row in cur.fetchall()}
+    if "health_id" not in appointment_columns:
+        # Alberta Personal Health Number (PHN), collected at booking (see
+        # routes/appointments.py) so a duplicate-active-appointment check can
+        # be scoped to it, same as the visits-side guard in routes/checkin.py.
+        cur.execute("ALTER TABLE appointments ADD COLUMN health_id TEXT DEFAULT NULL")
+        logger.info("Migrated appointments table: added health_id column")
+
     cur.execute("""
         CREATE TABLE IF NOT EXISTS staff_users (
             id TEXT PRIMARY KEY,
@@ -195,6 +223,18 @@ def init_db():
             created_at TEXT
         )
     """)
+
+    cur.execute("PRAGMA table_info(staff_users)")
+    staff_user_columns = {row["name"] for row in cur.fetchall()}
+    if "session_version" not in staff_user_columns:
+        # Bumped on logout (see routes/auth.py) so every previously-issued signed
+        # session cookie for that account - including one captured before logout -
+        # stops passing require_staff_login's check immediately, without needing
+        # any server-side session storage. A session whose staff_id no longer has
+        # a matching row at all (account deleted) is rejected the same way, by the
+        # same lookup finding nothing to compare against.
+        cur.execute("ALTER TABLE staff_users ADD COLUMN session_version INTEGER NOT NULL DEFAULT 1")
+        logger.info("Migrated staff_users table: added session_version column")
 
     cur.execute("""
         CREATE TABLE IF NOT EXISTS chat_log (
@@ -270,6 +310,31 @@ def init_db():
         # never lost even if classify_triage() fails (see routes/checkin.py).
         cur.execute("ALTER TABLE visits ADD COLUMN triage_answers TEXT DEFAULT NULL")
         logger.info("Migrated visits table: added triage_answers column")
+    if "health_id" not in visit_columns:
+        # Alberta Personal Health Number (PHN), collected at check-in. Validated
+        # server-side as 9 digits only (see routes/checkin.py) - format check,
+        # not a lookup against any registry - so it's stored as-is, nullable
+        # since it's added after visits already existed.
+        cur.execute("ALTER TABLE visits ADD COLUMN health_id TEXT DEFAULT NULL")
+        logger.info("Migrated visits table: added health_id column")
+    if "needs_doctor_reassignment" not in visit_columns:
+        # Explicitly set by convert_appointment_to_visit() (routes/appointments.py)
+        # at the moment a check-in merge finds the originally-booked doctor is no
+        # longer on shift and skips pre-assignment. Never inferred after the fact
+        # from booked_slot_time/doctor_id - that combination is only correct today
+        # because Arrived always assigns a doctor, and would silently break if
+        # anything else ever created an unassigned visit with a booked_slot_time.
+        cur.execute("ALTER TABLE visits ADD COLUMN needs_doctor_reassignment INTEGER DEFAULT 0")
+        logger.info("Migrated visits table: added needs_doctor_reassignment column")
+    if "stale_slot_at_checkin" not in visit_columns:
+        # Set only by the check-in merge path (routes/checkin.py) when the matched
+        # confirmed appointment's slot_time had already passed at the moment of
+        # check-in. Stores the original "HH:MM" slot string, or NULL. A point-in-time
+        # fact captured once, not something recomputable later - a same-day slot
+        # would trivially read as "passed" if compared against the current clock
+        # instead of what was actually true at check-in time.
+        cur.execute("ALTER TABLE visits ADD COLUMN stale_slot_at_checkin TEXT DEFAULT NULL")
+        logger.info("Migrated visits table: added stale_slot_at_checkin column")
 
     conn.commit()
     conn.close()

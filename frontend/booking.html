@@ -4,59 +4,23 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>CareFlow AI - Book an Appointment</title>
+  <link rel="stylesheet" href="/frontend/theme.css">
   <link rel="stylesheet" href="/frontend/chat-widget.css">
   <style>
-    * {
-      box-sizing: border-box;
-      margin: 0;
-      padding: 0;
-    }
-
-    body {
-      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Arial, sans-serif;
-      background: #f1f5f9;
-      color: #1e293b;
-      min-height: 100vh;
-      padding: 76px 16px 40px;
-      font-size: 16px;
-    }
-
     .container {
-      background: #ffffff;
-      border-radius: 12px;
-      box-shadow: 0 2px 12px rgba(0, 0, 0, 0.08);
-      padding: 32px 24px;
       max-width: 680px;
-      width: 100%;
-      margin: 0 auto;
-    }
-
-    h1 {
-      font-size: 24px;
-      margin-bottom: 4px;
-      color: #0f172a;
-    }
-
-    .subtitle {
-      color: #64748b;
-      margin-bottom: 24px;
-      font-size: 16px;
-    }
-
-    .hidden {
-      display: none;
     }
 
     .screen + .screen {
       margin-top: 32px;
       padding-top: 32px;
-      border-top: 1px solid #e2e8f0;
+      border-top: 1px solid var(--c-border);
     }
 
     .screen-heading {
       font-size: 18px;
       font-weight: 700;
-      color: #0f172a;
+      color: var(--c-navy);
       margin-bottom: 16px;
     }
 
@@ -68,36 +32,36 @@
     }
 
     .doctor-card {
-      border: 2px solid #e2e8f0;
+      border: 2px solid var(--c-border);
       border-radius: 10px;
       padding: 16px;
       cursor: pointer;
-      background: #fff;
+      background: var(--c-white);
       transition: border-color 0.15s ease, background 0.15s ease;
       position: relative;
     }
 
     .doctor-card:hover:not(.unavailable) {
-      border-color: #0D7377;
+      border-color: var(--c-teal);
     }
 
     .doctor-card.selected {
-      border-color: #0D7377;
-      background: #f0f9f9;
+      border-color: var(--c-teal);
+      background: var(--c-teal-soft);
     }
 
     .doctor-card.unavailable {
       cursor: not-allowed;
       opacity: 0.55;
-      background: #f8fafc;
+      background: #F8FAFC;
     }
 
     .doctor-icon {
       width: 36px;
       height: 36px;
       border-radius: 8px;
-      background: rgba(13, 115, 119, 0.1);
-      color: #0D7377;
+      background: var(--c-teal-soft);
+      color: var(--c-teal);
       display: flex;
       align-items: center;
       justify-content: center;
@@ -107,7 +71,7 @@
     .doctor-name {
       font-weight: 700;
       font-size: 15px;
-      color: #0f172a;
+      color: var(--c-navy);
       margin-bottom: 8px;
     }
 
@@ -120,13 +84,13 @@
     }
 
     .doctor-badge.available {
-      background: rgba(13, 115, 119, 0.12);
-      color: #0D7377;
+      background: var(--c-teal-soft);
+      color: var(--c-teal);
     }
 
     .doctor-badge.unavailable {
-      background: #f1f5f9;
-      color: #64748b;
+      background: #F1F5F9;
+      color: var(--c-text-muted);
     }
 
     .doctor-check {
@@ -136,8 +100,8 @@
       width: 20px;
       height: 20px;
       border-radius: 50%;
-      background: #0D7377;
-      color: #fff;
+      background: var(--c-teal);
+      color: var(--c-white);
       display: flex;
       align-items: center;
       justify-content: center;
@@ -156,37 +120,40 @@
       padding: 10px 8px;
       font-size: 14px;
       font-weight: 600;
+      font-family: inherit;
       border-radius: 8px;
       text-align: center;
       cursor: pointer;
-      border: 1.5px solid #0D7377;
-      background: #fff;
-      color: #0D7377;
+      border: 1.5px solid var(--c-teal);
+      background: var(--c-white);
+      color: var(--c-teal);
+      min-height: auto;
+      width: auto;
     }
 
     .slot-btn:hover {
-      background: rgba(13, 115, 119, 0.08);
+      background: var(--c-teal-soft);
     }
 
     .slot-btn.selected {
-      background: #0D7377;
-      color: #fff;
+      background: var(--c-teal);
+      color: var(--c-white);
     }
 
     .slot-btn.taken {
-      border-color: #e2e8f0;
-      background: #f8fafc;
-      color: #94a3b8;
+      border-color: var(--c-border);
+      background: #F8FAFC;
+      color: #94A3B8;
       cursor: not-allowed;
     }
 
     .slot-btn.taken:hover {
-      background: #f8fafc;
+      background: #F8FAFC;
     }
 
     /* Screen 3: details */
     .summary-card {
-      background: #f8fafc;
+      background: #F8FAFC;
       border-radius: 8px;
       padding: 16px;
       margin-bottom: 20px;
@@ -199,144 +166,23 @@
       font-size: 15px;
     }
 
+    .summary-row + .summary-row {
+      border-top: 1px solid var(--c-border);
+    }
+
     .summary-label {
-      color: #64748b;
+      color: var(--c-text-muted);
     }
 
     .summary-value {
       font-weight: 700;
-    }
-
-    .field {
-      margin-bottom: 18px;
-    }
-
-    label {
-      display: block;
-      font-weight: 600;
-      margin-bottom: 6px;
-      font-size: 16px;
-    }
-
-    input {
-      width: 100%;
-      padding: 12px 14px;
-      font-size: 16px;
-      border: 1px solid #cbd5e1;
-      border-radius: 8px;
-      min-height: 44px;
-      background: #fff;
-      color: #1e293b;
-    }
-
-    input:focus {
-      outline: none;
-      border-color: #2563eb;
-      box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.15);
-    }
-
-    input.invalid {
-      border-color: #ef4444;
-    }
-
-    .error {
-      display: block;
-      color: #ef4444;
-      font-size: 14px;
-      margin-top: 4px;
-      min-height: 18px;
-    }
-
-    button,
-    .button {
-      width: 100%;
-      padding: 14px;
-      font-size: 16px;
-      font-weight: 600;
-      border: none;
-      border-radius: 8px;
-      background: #2563eb;
-      color: #fff;
-      cursor: pointer;
-      min-height: 44px;
-      text-align: center;
-      text-decoration: none;
-      display: inline-block;
-    }
-
-    button:hover,
-    .button:hover {
-      background: #1d4ed8;
-    }
-
-    button:disabled {
-      background: #93c5fd;
-      cursor: not-allowed;
-    }
-
-    .button-secondary {
-      background: #fff;
-      color: #1e293b;
-      border: 1px solid #cbd5e1;
-    }
-
-    .button-secondary:hover {
-      background: #f8fafc;
-    }
-
-    #loading-screen,
-    #confirmation-screen,
-    #error-screen {
-      text-align: center;
-    }
-
-    .icon {
-      width: 56px;
-      height: 56px;
-      border-radius: 50%;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      margin: 0 auto 16px;
-      color: #fff;
-    }
-
-    .success-icon {
-      background: #10b981;
-    }
-
-    .error-icon {
-      background: #ef4444;
-      font-size: 28px;
-      font-weight: 700;
-    }
-
-    .spinner {
-      width: 40px;
-      height: 40px;
-      border: 4px solid #e2e8f0;
-      border-top-color: #2563eb;
-      border-radius: 50%;
-      margin: 0 auto 16px;
-      animation: spin 0.8s linear infinite;
-    }
-
-    @keyframes spin {
-      to {
-        transform: rotate(360deg);
-      }
-    }
-
-    .notice {
-      color: #64748b;
-      font-size: 16px;
-      margin-bottom: 20px;
+      color: var(--c-text);
     }
 
     #booking-error-banner {
-      background: #fef2f2;
-      border: 1px solid #fecaca;
-      color: #b91c1c;
+      background: var(--c-error-bg);
+      border: 1px solid #FECACA;
+      color: #B91C1C;
       border-radius: 8px;
       padding: 14px 16px;
       font-size: 15px;
@@ -346,12 +192,22 @@
     #booking-error-banner .button {
       margin-top: 12px;
     }
+
+    .field .optional {
+      color: #94A3B8;
+      font-weight: 400;
+    }
+
+    .loading-note {
+      color: var(--c-text-muted);
+      font-size: 14px;
+    }
   </style>
 </head>
 <body>
-  <nav style="background:#1B3A6B; padding:14px 32px; display:flex; align-items:center; justify-content:space-between; position:fixed; top:0; left:0; right:0; z-index:100; box-sizing:border-box;">
-    <span style="display:flex; align-items:center; gap:8px; color:white; font-weight:700; font-size:18px; font-family:Inter,sans-serif;"><img src="/frontend/logo.svg" alt="CareFlow AI logo" style="width:26px; height:26px; border-radius:50%; box-shadow:0 2px 6px rgba(0,0,0,0.18); display:block;">CareFlow AI</span>
-    <a href="/" style="color:white; font-size:14px; font-family:Inter,sans-serif; text-decoration:none; border:1px solid rgba(255,255,255,0.4); padding:8px 16px; border-radius:6px;">← Back to Home</a>
+  <nav class="site-nav">
+    <span class="site-nav-logo"><img src="/frontend/logo.svg" alt="CareFlow AI logo" style="width:26px; height:26px; border-radius:50%; box-shadow:0 2px 6px rgba(0,0,0,0.18); display:block;">CareFlow AI</span>
+    <a href="/" class="site-nav-back">← Back to Home</a>
   </nav>
 
   <div class="container">
@@ -365,7 +221,7 @@
       <!-- Screen 1: doctor selection -->
       <div id="screen-1" class="screen">
         <div id="doctor-grid" class="doctor-grid">
-          <p style="color:#64748b; font-size:14px;">Loading doctors...</p>
+          <p class="loading-note">Loading doctors...</p>
         </div>
       </div>
 
@@ -408,9 +264,15 @@
           </div>
 
           <div class="field">
-            <label for="patient_phone">Phone Number <span style="color:#94a3b8; font-weight:400;">(optional)</span></label>
+            <label for="patient_phone">Phone Number <span class="optional">(optional)</span></label>
             <input type="tel" id="patient_phone" name="patient_phone" autocomplete="tel">
             <span class="error" id="patient_phone-error"></span>
+          </div>
+
+          <div class="field">
+            <label for="health_id">Alberta Personal Health Number (PHN)</label>
+            <input type="text" id="health_id" name="health_id" inputmode="numeric" autocomplete="off">
+            <span class="error" id="health_id-error"></span>
           </div>
 
           <button type="submit" id="submit-btn">Confirm Appointment</button>
@@ -474,8 +336,10 @@
     const nameInput = document.getElementById("patient_name");
     const emailInput = document.getElementById("patient_email");
     const phoneInput = document.getElementById("patient_phone");
+    const healthIdInput = document.getElementById("health_id");
 
     const EMAIL_REGEX = /^[^@\s]+@[^@\s]+\.[^@\s]+$/;
+    const HEALTH_ID_REGEX = /^\d{9}$/;
 
     const DOCTOR_ICON_SVG = `
       <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
@@ -512,7 +376,7 @@
         const doctors = await response.json();
         renderDoctors(doctors);
       } catch {
-        doctorGrid.innerHTML = `<p style="color:#ef4444; font-size:14px;">Couldn't load doctors. Please refresh the page.</p>`;
+        doctorGrid.innerHTML = `<p class="loading-note" style="color:var(--c-error);">Couldn't load doctors. Please refresh the page.</p>`;
       }
     }
 
@@ -558,7 +422,7 @@
     }
 
     async function loadSlots(doctorId) {
-      slotsGrid.innerHTML = `<p style="color:#64748b; font-size:14px;">Loading slots...</p>`;
+      slotsGrid.innerHTML = `<p class="loading-note">Loading slots...</p>`;
       screen2.classList.remove("hidden");
       screen2.scrollIntoView({ behavior: "smooth", block: "start" });
 
@@ -570,7 +434,7 @@
         const slots = await response.json();
         renderSlots(slots);
       } catch {
-        slotsGrid.innerHTML = `<p style="color:#ef4444; font-size:14px;">Couldn't load time slots. Please try again.</p>`;
+        slotsGrid.innerHTML = `<p class="loading-note" style="color:var(--c-error);">Couldn't load time slots. Please try again.</p>`;
       }
     }
 
@@ -629,8 +493,21 @@
         setFieldError(emailInput, "");
       }
 
+      const healthId = healthIdInput.value.trim();
+      if (!healthId) {
+        setFieldError(healthIdInput, "Personal Health Number is required");
+        valid = false;
+      } else if (!HEALTH_ID_REGEX.test(healthId)) {
+        setFieldError(healthIdInput, "Enter exactly 9 digits, numeric only (no dashes or letters)");
+        valid = false;
+      } else {
+        setFieldError(healthIdInput, "");
+      }
+
       return valid;
     }
+
+    healthIdInput.addEventListener("blur", validateForm);
 
     form.addEventListener("submit", async (e) => {
       e.preventDefault();
@@ -651,6 +528,7 @@
         patient_name: nameInput.value.trim(),
         patient_email: emailInput.value.trim(),
         patient_phone: phoneInput.value.trim(),
+        health_id: healthIdInput.value.trim(),
       };
 
       try {

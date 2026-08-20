@@ -1,11 +1,22 @@
 import json
 import re
+from datetime import date
 from flask import Blueprint, request, jsonify
 
-from db import get_db, get_db_for_transaction, generate_id, calculate_wait, get_next_queue_position, now_iso
+from db import (
+    get_db,
+    get_db_for_transaction,
+    generate_id,
+    calculate_wait,
+    get_next_queue_position,
+    now_iso,
+    ACTIVE_STATUSES_EXCLUDE,
+    HEALTH_ID_REGEX,
+)
 from mail import send_welcome_email
 from triage import classify_triage, TRIAGE_QUESTIONS
 from rate_limit import limiter
+from routes.appointments import get_doctor, convert_appointment_to_visit, slot_has_passed
 
 checkin_bp = Blueprint("checkin", __name__)
 
@@ -26,9 +37,10 @@ def checkin():
     visit_type = (data.get("visit_type") or "").strip()
     email = (data.get("email") or "").strip()
     phone = (data.get("phone") or "").strip()
+    health_id = (data.get("health_id") or "").strip()
 
-    if not name or not visit_type or not email or not phone:
-        return jsonify({"error": "name, visit_type, email, and phone are required"}), 400
+    if not name or not visit_type or not email or not phone or not health_id:
+        return jsonify({"error": "name, visit_type, email, phone, and health_id are required"}), 400
 
     if len(name) > MAX_NAME_LENGTH:
         return jsonify({"error": f"name must be {MAX_NAME_LENGTH} characters or fewer"}), 400
@@ -45,23 +57,81 @@ def checkin():
     if not EMAIL_REGEX.match(email):
         return jsonify({"error": "invalid email format"}), 400
 
-    visit_id = generate_id()
-    created_at = now_iso()
+    if not HEALTH_ID_REGEX.match(health_id):
+        return jsonify({
+            "error": (
+                "health_id must be exactly 9 digits, numeric only, with no dashes or letters. "
+                "This checks format only - it does not verify that the PHN is registered or active."
+            )
+        }), 400
 
     conn = get_db_for_transaction()
     cur = conn.cursor()
+    matched_appointment = None
+    assign_doctor = True
+    stale_slot_value = None
     try:
         cur.execute("BEGIN IMMEDIATE")
-        queue_position = get_next_queue_position(cur)
-        estimated_wait = calculate_wait(visit_type, queue_position)
+
+        placeholders = ",".join("?" for _ in ACTIVE_STATUSES_EXCLUDE)
         cur.execute(
-            """
-            INSERT INTO visits (id, name, visit_type, email, phone, queue_position,
-                                 status, estimated_wait, created_at, updated_at)
-            VALUES (?, ?, ?, ?, ?, ?, 'checked_in', ?, ?, ?)
-            """,
-            (visit_id, name, visit_type, email, phone, queue_position, estimated_wait, created_at, created_at),
+            f"SELECT id FROM visits WHERE health_id = ? AND status NOT IN ({placeholders})",
+            (health_id, *ACTIVE_STATUSES_EXCLUDE),
         )
+        if cur.fetchone():
+            cur.execute("ROLLBACK")
+            conn.close()
+            return jsonify({"error": "This health ID already has an active visit in the queue."}), 409
+
+        # A confirmed same-day appointment for this PHN means the patient is
+        # walking in for a booking they already made, not a fresh visit - merge
+        # into it via the same conversion Arrived uses, rather than creating a
+        # second, disconnected visit for the same person (see routes/appointments.py).
+        today_str = date.today().isoformat()
+        cur.execute(
+            "SELECT id, doctor_id, patient_name, patient_email, patient_phone, health_id, slot_time, status, visit_id "
+            "FROM appointments WHERE health_id = ? AND status = 'confirmed' AND slot_date = ?",
+            (health_id, today_str),
+        )
+        matched_appointment = cur.fetchone()
+
+        if matched_appointment:
+            doctor = get_doctor(cur, matched_appointment["doctor_id"])
+            assign_doctor = doctor is not None and doctor["status"] == "on_shift"
+            stale_slot_value = (
+                matched_appointment["slot_time"]
+                if slot_has_passed(matched_appointment["slot_time"])
+                else None
+            )
+
+            visit_id, queue_position, estimated_wait, doctor_id = convert_appointment_to_visit(
+                cur,
+                matched_appointment,
+                "system (check-in merge)",
+                visit_type=visit_type,
+                patient_name=name,
+                patient_email=email,
+                patient_phone=phone,
+                assign_doctor=assign_doctor,
+                stale_slot_at_checkin=stale_slot_value,
+            )
+        else:
+            visit_id = generate_id()
+            created_at = now_iso()
+            queue_position = get_next_queue_position(cur)
+            estimated_wait = calculate_wait(visit_type, queue_position)
+            cur.execute(
+                """
+                INSERT INTO visits (id, name, visit_type, email, phone, health_id, queue_position,
+                                     status, estimated_wait, created_at, updated_at)
+                VALUES (?, ?, ?, ?, ?, ?, ?, 'checked_in', ?, ?, ?)
+                """,
+                (
+                    visit_id, name, visit_type, email, phone, health_id,
+                    queue_position, estimated_wait, created_at, created_at,
+                ),
+            )
+
         cur.execute("COMMIT")
     except Exception:
         cur.execute("ROLLBACK")
@@ -71,12 +141,25 @@ def checkin():
 
     send_welcome_email(name, visit_type, queue_position, estimated_wait, email)
 
-    return jsonify({
+    response = {
         "visit_id": visit_id,
         "queue_position": queue_position,
         "estimated_wait": estimated_wait,
         "status": "checked_in",
-    }), 201
+    }
+
+    if matched_appointment:
+        response["merged_appointment_id"] = matched_appointment["id"]
+        if not assign_doctor:
+            response["doctor_off_shift"] = True
+            response["note"] = (
+                "Your originally booked doctor is currently off shift. "
+                "A staff member will assign you to an available doctor."
+            )
+        if stale_slot_value:
+            response["stale_appointment_slot"] = stale_slot_value
+
+    return jsonify(response), 201
 
 
 @checkin_bp.route("/api/triage", methods=["POST"])

@@ -3,6 +3,7 @@ import { Routes, Route } from 'react-router-dom';
 import Dashboard from './components/Dashboard';
 import DoctorsPage from './components/DoctorsPage';
 import PatientsPage from './components/PatientsPage';
+import AnalyticsPage from './components/AnalyticsPage';
 import StaffChatWidget from './components/StaffChatWidget';
 import Sidebar from './components/Sidebar';
 
@@ -62,6 +63,7 @@ function App() {
           <Route path="/" element={<Dashboard />} />
           <Route path="/doctors" element={<DoctorsPage />} />
           <Route path="/patients" element={<PatientsPage />} />
+          <Route path="/analytics" element={<AnalyticsPage />} />
         </Routes>
       </div>
 

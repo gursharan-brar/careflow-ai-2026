@@ -147,6 +147,12 @@ function DoctorLane({ lane, isDragOver, onDragOver, onDragLeave, onDrop, onDragS
         </span>
       </div>
 
+      {lane.upcomingAppointment && (
+        <div className="px-5 py-2.5 bg-amber-50 border-b border-amber-100 text-sm text-amber-700 font-medium">
+          Appointment at {lane.upcomingAppointment.slot_time} in {lane.upcomingAppointment.minutes_away} min
+        </div>
+      )}
+
       {!lane.isOnShift && (
         <div className="px-5 py-2.5 bg-amber-50 border-b border-amber-100 text-sm text-amber-700 font-medium">
           {lane.doctorName} is now off shift — patients still assigned.
@@ -173,6 +179,11 @@ function DoctorLane({ lane, isDragOver, onDragOver, onDragLeave, onDrop, onDragS
                   {visit.booked_slot_time && (
                     <span className="inline-block px-2 py-0.5 rounded text-[11px] font-bold bg-c-teal/10 text-c-teal">
                       Booked {formatSlotLabel(visit.booked_slot_time)}
+                    </span>
+                  )}
+                  {visit.stale_slot_at_checkin && (
+                    <span className="inline-block px-2 py-0.5 rounded text-[11px] font-bold bg-amber-100 text-amber-700">
+                      Slot passed {formatSlotLabel(visit.stale_slot_at_checkin)}
                     </span>
                   )}
                 </div>
@@ -322,6 +333,11 @@ export default function QueuePanel({ queue, loading, setQueue, onShiftDoctors, d
         doctorName: onShiftDoctor ? onShiftDoctor.name : patients[0]?.doctor_name || `Doctor ${doctorId}`,
         patients,
         isOnShift: onShiftIds.has(doctorId),
+        // Duplicated onto every visit row for this doctor by GET /api/queue,
+        // so any one row's value is representative of the whole lane. A lane
+        // with zero currently-assigned patients has no row to read this from
+        // and will not show the banner — a known, disclosed limitation.
+        upcomingAppointment: patients[0]?.upcoming_appointment || null,
       };
     });
 
@@ -392,7 +408,23 @@ export default function QueuePanel({ queue, loading, setQueue, onShiftDoctors, d
                       <td className="px-5">
                         <div className="flex items-center gap-3">
                           <Avatar name={visit.name} className="w-9 h-9 text-sm bg-c-teal/10 text-c-teal" />
-                          <span className="font-bold text-base text-gray-900">{visit.name}</span>
+                          <div>
+                            <span className="font-bold text-base text-gray-900">{visit.name}</span>
+                            {(visit.needs_doctor_reassignment || visit.stale_slot_at_checkin) && (
+                              <div className="flex flex-wrap gap-1.5 mt-1">
+                                {visit.needs_doctor_reassignment && (
+                                  <span className="inline-block px-2 py-0.5 rounded text-[11px] font-bold bg-amber-100 text-amber-700">
+                                    Doctor off shift
+                                  </span>
+                                )}
+                                {visit.stale_slot_at_checkin && (
+                                  <span className="inline-block px-2 py-0.5 rounded text-[11px] font-bold bg-amber-100 text-amber-700">
+                                    Slot passed {formatSlotLabel(visit.stale_slot_at_checkin)}
+                                  </span>
+                                )}
+                              </div>
+                            )}
+                          </div>
                         </div>
                       </td>
                       <td className="px-5 text-base text-gray-500">
